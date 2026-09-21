@@ -1,0 +1,44 @@
+﻿services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: booking-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: paulakhere/booking-app-backend:latest
+    container_name: booking-backend
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://postgres:[REDACTED]@postgres:5432/postgres
+      NODE_ENV: production
+      JWT_SECRET: your-secret-key-change-in-production
+      EMAIL_USER: your-email@gmail.com
+      EMAIL_PASS: your-app-password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: paulakhere/booking-app-frontend:latest
+    container_name: booking-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
