@@ -15,8 +15,10 @@
     .card h3 { color: #667eea; margin-bottom: 10px; }
     .card p { color: #666; margin-bottom: 8px; }
     .price { font-size: 1.5em; color: #764ba2; font-weight: bold; }
-    button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; }
+    button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; margin-right: 5px; }
     button:hover { background: #764ba2; }
+    .cancel-btn { background: #dc3545; }
+    .cancel-btn:hover { background: #c82333; }
     input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; font-size: 1em; }
     .auth-form { background: white; padding: 40px; border-radius: 10px; max-width: 400px; margin: 50px auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
     .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
@@ -25,6 +27,9 @@
     .logout { float: right; }
     .category-title { color: white; font-size: 1.5em; margin-top: 30px; margin-bottom: 15px; text-transform: capitalize; }
     .category-emoji { margin-right: 10px; }
+    .status-cancelled { color: #dc3545; font-weight: bold; }
+    .status-pending { color: #ffc107; font-weight: bold; }
+    .status-confirmed { color: #28a745; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -221,11 +226,32 @@
             <p>📍 ${b.address}, ${b.city}</p>
             <p>📅 ${b.booking_date} at ${b.booking_time}</p>
             <p>💰 <span class="price">$${b.price}</span></p>
-            <p>Status: <strong>${b.status}</strong></p>
+            <p>Status: <span class="status-${b.status}">${b.status.toUpperCase()}</span></p>
+            ${b.status !== 'cancelled' ? `<button class="cancel-btn" onclick="cancelBooking('${b.id}')">Cancel Booking</button>` : ''}
           </div>
         `).join('');
       } catch (err) {
         console.error('Error loading bookings:', err);
+      }
+    }
+
+    async function cancelBooking(bookingId) {
+      if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+      try {
+        const res = await fetch(`${API}/bookings/${bookingId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          alert('Booking cancelled successfully');
+          loadBookings();
+        } else {
+          alert('Failed to cancel booking');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
       }
     }
 

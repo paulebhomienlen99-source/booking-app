@@ -122,6 +122,16 @@ app.patch('/bookings/:id', verifyToken, async (req, res) => {
   }
 });
 
+app.delete('/bookings/:id', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await client.query('UPDATE bookings SET status = $1 WHERE id = $2 AND user_id = $3', ['cancelled', id, req.userId]);
+    res.json({ message: 'Booking cancelled' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
 
 const PORT = process.env.PORT || 3001;
