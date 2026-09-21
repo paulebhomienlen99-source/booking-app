@@ -16,6 +16,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:[REDACTED]@postgres:5432/postgres',
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 
 // Email transporter (using Gmail or your email service)
@@ -78,7 +79,7 @@ async function initDB() {
         ('550e8400-e29b-41d4-a716-446655440003', 'Consultation', 'One-on-one consultation', 45, 50.00)
       ON CONFLICT DO NOTHING;
     `);
-    console.log('Database initialized');
+    console.log('Database initialized with sample services');
   } catch (err) {
     console.error('DB init error:', err.message);
   }
@@ -217,7 +218,14 @@ app.patch('/bookings/:id', verifyToken, async (req, res) => {
   }
 });
 
-app.listen(3001, () => {
-  console.log('Backend running on port 3001 with JWT auth and email notifications');
+// Serve frontend
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
+});
+
+// Start server
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT} with JWT auth and email notifications`);
   initDB();
 });
