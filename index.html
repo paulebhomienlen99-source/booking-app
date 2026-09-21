@@ -23,6 +23,8 @@
     .success { color: #155724; background: #d4edda; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
     .services, .bookings { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
     .logout { float: right; }
+    .category-title { color: white; font-size: 1.5em; margin-top: 30px; margin-bottom: 15px; text-transform: capitalize; }
+    .category-emoji { margin-right: 10px; }
   </style>
 </head>
 <body>
@@ -68,10 +70,10 @@
         <button onclick="createBooking()" style="width: 100%;">Book Now</button>
       </div>
 
-      <h2 style="color: white; margin-bottom: 20px;">Available Services</h2>
-      <div class="services" id="services"></div>
+      <h2 style="color: white; margin-bottom: 20px;">📋 Available Services</h2>
+      <div id="services"></div>
 
-      <h2 style="color: white; margin-bottom: 20px;">Your Bookings</h2>
+      <h2 style="color: white; margin-bottom: 20px;">✅ Your Bookings</h2>
       <div class="bookings" id="bookings"></div>
     </div>
   </div>
@@ -79,6 +81,7 @@
   <script>
     const API = 'https://booking-app-paulebhomienlen-646825d168bf.herokuapp.com';
     let token = localStorage.getItem('token');
+    const categoryEmojis = { salon: '💅', restaurant: '🍽️', taxi: '🚕', hotel: '🏨' };
 
     if (token) showApp(); else showAuth();
 
@@ -172,16 +175,27 @@
         const servicesDiv = document.getElementById('services');
         const serviceSelect = document.getElementById('service');
         
-        servicesDiv.innerHTML = services.map(s => `
-          <div class="card">
-            <h3>${s.name}</h3>
-            <p>${s.description}</p>
-            <p>Duration: ${s.duration_minutes} min</p>
-            <p class="price">$${s.price}</p>
-          </div>
-        `).join('');
-        
-        serviceSelect.innerHTML = '<option>Select a service</option>' + services.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        let html = '';
+        let currentCategory = '';
+        let selectOptions = '<option>Select a service</option>';
+
+        services.forEach(s => {
+          if (currentCategory !== s.category) {
+            currentCategory = s.category;
+            html += `<h3 class="category-title"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span>${s.category.toUpperCase()}</h3>`;
+          }
+          html += `
+            <div class="card">
+              <h3>${s.name}</h3>
+              <p>${s.description}</p>
+              <p>Duration: ${s.duration_minutes} min | Price: <span class="price">$${s.price}</span></p>
+            </div>
+          `;
+          selectOptions += `<option value="${s.id}">${s.name} - $${s.price}</option>`;
+        });
+
+        servicesDiv.innerHTML = html;
+        serviceSelect.innerHTML = selectOptions;
       } catch (err) {
         console.error('Error loading services:', err);
       }
@@ -197,7 +211,7 @@
         const bookingsDiv = document.getElementById('bookings');
         
         if (bookings.length === 0) {
-          bookingsDiv.innerHTML = '<p style="color: white;">No bookings yet</p>';
+          bookingsDiv.innerHTML = '<p style="color: white;">No bookings yet. Start booking now!</p>';
           return;
         }
         
@@ -205,7 +219,8 @@
           <div class="card">
             <h3>${b.name}</h3>
             <p>Date: ${b.booking_date} at ${b.booking_time}</p>
-            <p>Price: $${b.price}</p>
+            <p>Price: <span class="price">$${b.price}</span></p>
+            <p>Status: <strong>${b.status}</strong></p>
           </div>
         `).join('');
       } catch (err) {

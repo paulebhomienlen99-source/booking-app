@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
 const { v4: uuidv4 } = require('uuid');
@@ -21,9 +21,22 @@ client.connect().catch(err => console.error('Connection error:', err));
 async function initDB() {
   try {
     await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await client.query(`INSERT INTO services (id, name, description, duration_minutes, price) VALUES ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 30, 25.00), ('550e8400-e29b-41d4-a716-446655440002', 'Massage', 'Relaxing full-body massage', 60, 80.00), ('550e8400-e29b-41d4-a716-446655440003', 'Consultation', 'One-on-one consultation', 45, 50.00) ON CONFLICT DO NOTHING`);
+    
+    await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price) VALUES 
+      ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'salon', 30, 25.00),
+      ('550e8400-e29b-41d4-a716-446655440002', 'Massage', 'Relaxing full-body massage', 'salon', 60, 80.00),
+      ('550e8400-e29b-41d4-a716-446655440003', 'Consultation', 'One-on-one consultation', 'salon', 45, 50.00),
+      ('550e8400-e29b-41d4-a716-446655440004', 'Italian Restaurant', 'Fine dining Italian cuisine', 'restaurant', 120, 65.00),
+      ('550e8400-e29b-41d4-a716-446655440005', 'Sushi Bar', 'Fresh Japanese sushi experience', 'restaurant', 90, 55.00),
+      ('550e8400-e29b-41d4-a716-446655440006', 'Burger Joint', 'Casual burger and fries', 'restaurant', 60, 20.00),
+      ('550e8400-e29b-41d4-a716-446655440007', 'City Taxi', 'Economy taxi service', 'taxi', 30, 15.00),
+      ('550e8400-e29b-41d4-a716-446655440008', 'Premium Taxi', 'Luxury taxi service', 'taxi', 30, 30.00),
+      ('550e8400-e29b-41d4-a716-446655440009', '5-Star Hotel', 'Luxury hotel with all amenities', 'hotel', 1440, 250.00),
+      ('550e8400-e29b-41d4-a716-446655440010', '4-Star Hotel', 'Comfortable hotel with great service', 'hotel', 1440, 150.00),
+      ('550e8400-e29b-41d4-a716-446655440011', 'Budget Hotel', 'Affordable hotel rooms', 'hotel', 1440, 75.00)
+      ON CONFLICT DO NOTHING`);
     console.log('Database initialized');
   } catch (err) {
     console.error('DB init error:', err.message);
@@ -71,7 +84,17 @@ app.post('/auth/login', async (req, res) => {
 
 app.get('/services', async (req, res) => {
   try {
-    const result = await client.query('SELECT * FROM services');
+    const result = await client.query('SELECT * FROM services ORDER BY category, name');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/services/category/:category', async (req, res) => {
+  const { category } = req.params;
+  try {
+    const result = await client.query('SELECT * FROM services WHERE category = $1 ORDER BY name', [category]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -91,8 +114,19 @@ app.post('/bookings', verifyToken, async (req, res) => {
 
 app.get('/bookings', verifyToken, async (req, res) => {
   try {
-    const result = await client.query('SELECT b.*, s.name, s.price FROM bookings b JOIN services s ON b.service_id = s.id WHERE b.user_id = $1', [req.userId]);
+    const result = await client.query('SELECT b.*, s.name, s.price FROM bookings b JOIN services s ON b.service_id = s.id WHERE b.user_id = $1 ORDER BY b.booking_date DESC', [req.userId]);
     res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/bookings/:id', verifyToken, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    await client.query('UPDATE bookings SET status = $1 WHERE id = $2 AND user_id = $3', [status, id, req.userId]);
+    res.json({ message: 'Booking updated' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -105,3 +139,5 @@ app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
   initDB();
 });
+
+client.on('error', (err) => console.error('Database error:', err));
