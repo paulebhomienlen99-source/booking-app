@@ -34,7 +34,6 @@
       <div class="auth-form">
         <h2>Booking App</h2>
         <div id="authError" class="error hidden"></div>
-        <div id="authSuccess" class="success hidden"></div>
         
         <div id="loginForm">
           <h3>Login</h3>
@@ -67,6 +66,8 @@
         <select id="service" required><option>Select a service</option></select>
         <input type="date" id="date" required>
         <input type="time" id="time" required>
+        <input type="text" id="address" placeholder="Address" required>
+        <input type="text" id="city" placeholder="City" required>
         <button onclick="createBooking()" style="width: 100%;">Book Now</button>
       </div>
 
@@ -102,7 +103,6 @@
       document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
       document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
       document.getElementById('authError').classList.add('hidden');
-      document.getElementById('authSuccess').classList.add('hidden');
     }
 
     async function signup() {
@@ -218,8 +218,9 @@
         bookingsDiv.innerHTML = bookings.map(b => `
           <div class="card">
             <h3>${b.name}</h3>
-            <p>Date: ${b.booking_date} at ${b.booking_time}</p>
-            <p>Price: <span class="price">$${b.price}</span></p>
+            <p>📍 ${b.address}, ${b.city}</p>
+            <p>📅 ${b.booking_date} at ${b.booking_time}</p>
+            <p>💰 <span class="price">$${b.price}</span></p>
             <p>Status: <strong>${b.status}</strong></p>
           </div>
         `).join('');
@@ -232,8 +233,10 @@
       const service_id = document.getElementById('service').value;
       const booking_date = document.getElementById('date').value;
       const booking_time = document.getElementById('time').value;
+      const address = document.getElementById('address').value;
+      const city = document.getElementById('city').value;
 
-      if (!service_id || service_id === 'Select a service' || !booking_date || !booking_time) {
+      if (!service_id || service_id === 'Select a service' || !booking_date || !booking_time || !address || !city) {
         alert('Please fill all fields');
         return;
       }
@@ -245,13 +248,15 @@
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ service_id, booking_date, booking_time })
+          body: JSON.stringify({ service_id, booking_date, booking_time, address, city })
         });
         
         if (res.ok) {
           alert('Booking created successfully!');
           document.getElementById('date').value = '';
           document.getElementById('time').value = '';
+          document.getElementById('address').value = '';
+          document.getElementById('city').value = '';
           document.getElementById('service').value = '';
           loadBookings();
         } else {

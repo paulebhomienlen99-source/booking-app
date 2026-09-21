@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const { Client } = require('pg');
 const { v4: uuidv4 } = require('uuid');
@@ -22,7 +22,7 @@ async function initDB() {
   try {
     await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, address VARCHAR(255), city VARCHAR(100), status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     
     await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price) VALUES 
       ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'salon', 30, 25.00),
@@ -91,21 +91,11 @@ app.get('/services', async (req, res) => {
   }
 });
 
-app.get('/services/category/:category', async (req, res) => {
-  const { category } = req.params;
-  try {
-    const result = await client.query('SELECT * FROM services WHERE category = $1 ORDER BY name', [category]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 app.post('/bookings', verifyToken, async (req, res) => {
-  const { service_id, booking_date, booking_time } = req.body;
+  const { service_id, booking_date, booking_time, address, city } = req.body;
   const id = uuidv4();
   try {
-    await client.query('INSERT INTO bookings (id, user_id, service_id, booking_date, booking_time) VALUES ($1, $2, $3, $4, $5)', [id, req.userId, service_id, booking_date, booking_time]);
+    await client.query('INSERT INTO bookings (id, user_id, service_id, booking_date, booking_time, address, city) VALUES ($1, $2, $3, $4, $5, $6, $7)', [id, req.userId, service_id, booking_date, booking_time, address, city]);
     res.json({ id, message: 'Booking created' });
   } catch (err) {
     res.status(500).json({ error: err.message });
