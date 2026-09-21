@@ -13,10 +13,15 @@ app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-// Database connection
+// Database connection with proper SSL for Heroku
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:[REDACTED]@postgres:5432/postgres',
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 // Email transporter (using Gmail or your email service)
@@ -171,22 +176,24 @@ app.post('/bookings', verifyToken, async (req, res) => {
     const service = serviceResult.rows[0];
 
     // Send confirmation email
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: req.userEmail,
-      subject: `Booking Confirmation: ${service.name}`,
-      html: `
-        <h2>Booking Confirmed!</h2>
-        <p>Your booking for <strong>${service.name}</strong> is confirmed.</p>
-        <p><strong>Date:</strong> ${booking_date}</p>
-        <p><strong>Time:</strong> ${booking_time}</p>
-        <p><strong>Duration:</strong> ${service.duration_minutes} minutes</p>
-        <p><strong>Price:</strong> $${service.price}</p>
-        <p>Thank you for booking with us!</p>
-      `,
-    });
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: req.userEmail,
+        subject: `Booking Confirmation: ${service.name}`,
+        html: `
+          <h2>Booking Confirmed!</h2>
+          <p>Your booking for <strong>${service.name}</strong> is confirmed.</p>
+          <p><strong>Date:</strong> ${booking_date}</p>
+          <p><strong>Time:</strong> ${booking_time}</p>
+          <p><strong>Duration:</strong> ${service.duration_minutes} minutes</p>
+          <p><strong>Price:</strong> $${service.price}</p>
+          <p>Thank you for booking with us!</p>
+        `,
+      }).catch(err => console.error('Email error:', err.message));
+    }
 
-    res.json({ id, message: 'Booking created and confirmation email sent' });
+    res.json({ id, message: 'Booking created' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -223,9 +230,18 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT} with JWT auth and email notifications`);
   initDB();
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
 });
