@@ -235,34 +235,25 @@
     async function cancelBooking(bookingId) {
       if (!confirm('Are you sure you want to cancel this booking?')) return;
 
-      try {
-        console.log('Cancelling booking:', bookingId);
-        console.log('Token:', token);
-        console.log('API URL:', `${API}/bookings/${bookingId}`);
-        
-        const res = await fetch(`${API}/bookings/${bookingId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ status: 'cancelled' })
-        });
-        
-        console.log('Response status:', res.status);
-        const data = await res.json();
-        console.log('Response data:', data);
-        
-        if (res.ok) {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PATCH', `${API}/bookings/${bookingId}`, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      
+      xhr.onload = function() {
+        if (xhr.status === 200) {
           alert('Booking cancelled successfully');
           loadBookings();
         } else {
-          alert('Error: ' + (data.error || 'Failed to cancel'));
+          alert('Error: ' + (xhr.responseText || 'Failed to cancel'));
         }
-      } catch (err) {
-        console.error('Cancel error:', err);
-        alert('Error: ' + err.message);
-      }
+      };
+      
+      xhr.onerror = function() {
+        alert('Error: Request failed');
+      };
+      
+      xhr.send(JSON.stringify({ status: 'cancelled' }));
     }
 
     async function createBooking() {
