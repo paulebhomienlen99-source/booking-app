@@ -237,15 +237,20 @@
 
       try {
         const res = await fetch(`${API}/bookings/${bookingId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: 'cancelled' })
         });
         
         if (res.ok) {
           alert('Booking cancelled successfully');
           loadBookings();
         } else {
-          alert('Failed to cancel booking');
+          const data = await res.json();
+          alert('Error: ' + (data.error || 'Failed to cancel'));
         }
       } catch (err) {
         alert('Error: ' + err.message);
