@@ -236,6 +236,10 @@
       if (!confirm('Are you sure you want to cancel this booking?')) return;
 
       try {
+        console.log('Cancelling booking:', bookingId);
+        console.log('Token:', token);
+        console.log('API URL:', `${API}/bookings/${bookingId}`);
+        
         const res = await fetch(`${API}/bookings/${bookingId}`, {
           method: 'PATCH',
           headers: {
@@ -245,14 +249,18 @@
           body: JSON.stringify({ status: 'cancelled' })
         });
         
+        console.log('Response status:', res.status);
+        const data = await res.json();
+        console.log('Response data:', data);
+        
         if (res.ok) {
           alert('Booking cancelled successfully');
           loadBookings();
         } else {
-          const data = await res.json();
           alert('Error: ' + (data.error || 'Failed to cancel'));
         }
       } catch (err) {
+        console.error('Cancel error:', err);
         alert('Error: ' + err.message);
       }
     }
