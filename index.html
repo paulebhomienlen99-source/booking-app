@@ -51,12 +51,6 @@
           <p style="text-align: center; margin-top: 10px;">
             Don't have an account? <a href="#" onclick="switchTab('signup'); return false;" class="link">Sign Up</a>
           </p>
-          <p style="text-align: center; margin-top: 5px;">
-            <a href="#" onclick="switchTab('forgot'); return false;" class="link">Forgot Password?</a>
-          </p>
-          <p style="text-align: center; margin-top: 10px;">
-            <a href="#" onclick="switchTab('browse'); return false;" class="link">Browse Available Services</a>
-          </p>
         </div>
 
         <div id="signupForm" class="hidden">
@@ -69,72 +63,14 @@
             Already have an account? <a href="#" onclick="switchTab('login'); return false;" class="link">Login</a>
           </p>
         </div>
-
-        <div id="forgotForm" class="hidden">
-          <h3>Forgot Password?</h3>
-          <p style="color: #666; margin-bottom: 15px;">Enter your email to receive a password reset link.</p>
-          <input type="email" id="forgotEmail" placeholder="Email" required>
-          <button onclick="forgotPassword()" style="width: 100%;">Send Reset Link</button>
-          <p style="text-align: center; margin-top: 10px;">
-            <a href="#" onclick="switchTab('login'); return false;" class="link">Back to Login</a>
-          </p>
-        </div>
-
-        <div id="resetForm" class="hidden">
-          <h3>Reset Password</h3>
-          <input type="text" id="resetToken" placeholder="Reset Token" required>
-          <input type="password" id="resetPassword" placeholder="New Password" required>
-          <button onclick="resetPassword()" style="width: 100%;">Reset Password</button>
-          <p style="text-align: center; margin-top: 10px;">
-            <a href="#" onclick="switchTab('login'); return false;" class="link">Back to Login</a>
-          </p>
-        </div>
-
-        <div id="browseForm" class="hidden">
-          <h3>Available Services</h3>
-          <p style="color: #666; margin-bottom: 15px;">Check out all our available services. Sign up to book!</p>
-          <div id="publicServices" style="max-height: 400px; overflow-y: auto;"></div>
-          <p style="text-align: center; margin-top: 15px;">
-            <a href="#" onclick="switchTab('login'); return false;" class="link">Back to Login</a>
-          </p>
-        </div>
       </div>
     </div>
-
-    <div id="upgradeModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
-      <div class="card" style="max-width: 500px;">
-        <span onclick="closeUpgradeModal()" style="float: right; cursor: pointer; font-size: 24px; color: #999;">&times;</span>
-        <h2>Upgrade Your Plan</h2>
-        <p style="color: #666; margin-bottom: 20px;">Get more bookings and earn more commission!</p>
-        
-        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 10px;">
-          <h4>📦 Free Plan</h4>
-          <p>10 bookings/month</p>
-          <p style="color: #28a745; font-weight: bold;">$0/month</p>
-          <button onclick="alert('Already on Free Plan')" style="width: 100%; background: #ccc; cursor: default;">Current Plan</button>
-        </div>
-        
-        <div style="border: 2px solid #667eea; padding: 15px; border-radius: 5px; margin-bottom: 10px; background: #f0f4ff;">
-          <h4>⭐ Premium Plan</h4>
-          <p>100 bookings/month</p>
-          <p style="color: #28a745; font-weight: bold;">$9.99/month</p>
-          <button onclick="upgradePlan('premium')" style="width: 100%; background: #667eea;">Upgrade Now</button>
-        </div>
-        
-        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
-          <h4>🚀 Pro Plan</h4>
-          <p>Unlimited bookings</p>
-          <p style="color: #28a745; font-weight: bold;">$19.99/month</p>
-          <button onclick="upgradePlan('pro')" style="width: 100%; background: #764ba2;">Upgrade Now</button>
-        </div>
-      </div>
 
     <div id="appSection" class="hidden">
       <header>
         <h1>📅 Booking App</h1>
         <div class="user-info">
-          <p>Welcome, <strong id="userName">User</strong>! | <span id="planBadge" style="background: #667eea; padding: 5px 10px; border-radius: 5px; font-size: 0.9em;">Free Plan</span></p>
-          <p style="font-size: 0.85em; margin-top: 3px;">Bookings: <strong id="bookingCount">0/10</strong></p>
+          <p>Welcome, <strong id="userName">User</strong>!</p>
           <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
       </header>
@@ -146,7 +82,6 @@
         <input type="date" id="date" required>
         <input type="time" id="time" required>
         <input type="text" id="address" placeholder="Address" required>
-        <p id="priceDisplay" style="color: #764ba2; font-weight: bold; margin: 10px 0;">Price: calculating...</p>
         <button onclick="createBooking()" style="width: 100%;">Book Now</button>
       </div>
 
@@ -154,10 +89,6 @@
         <h2>💰 Earnings Dashboard</h2>
         <p>Total Commission Earned: <span style="font-size: 1.5em; color: #28a745; font-weight: bold;" id="totalEarnings">$0</span></p>
         <p>Total Bookings: <strong id="totalBookings">0</strong></p>
-        <hr style="margin: 15px 0;">
-        <h3>Subscription Plans</h3>
-        <p id="currentPlan" style="color: #667eea; margin-bottom: 10px;"><strong>Current Plan: Free</strong></p>
-        <button onclick="showUpgradeModal()" style="width: 100%; background: #28a745;">Upgrade to Premium</button>
       </div>
 
       <h2 style="color: white; margin-bottom: 20px;">📋 Available Services</h2>
@@ -187,7 +118,6 @@
       document.getElementById('userName').textContent = userName || 'User';
       loadCities();
       loadServices();
-      loadSubscription();
       loadEarnings();
       loadBookings();
       setInterval(loadBookings, 5000);
@@ -196,12 +126,8 @@
     function switchTab(tab) {
       document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
       document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
-      document.getElementById('forgotForm').classList.toggle('hidden', tab !== 'forgot');
-      document.getElementById('resetForm').classList.toggle('hidden', tab !== 'reset');
-      document.getElementById('browseForm').classList.toggle('hidden', tab !== 'browse');
       document.getElementById('authError').classList.add('hidden');
       document.getElementById('authSuccess').classList.add('hidden');
-      if (tab === 'browse') loadPublicServices();
     }
 
     async function signup() {
@@ -271,78 +197,6 @@
       }
     }
 
-    async function forgotPassword() {
-      const email = document.getElementById('forgotEmail').value;
-      const errorDiv = document.getElementById('authError');
-      const successDiv = document.getElementById('authSuccess');
-
-      if (!email) {
-        errorDiv.textContent = 'Please enter your email';
-        errorDiv.classList.remove('hidden');
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API}/auth/forgot-password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        });
-        const data = await res.json();
-        
-        if (!res.ok) {
-          errorDiv.textContent = data.error || 'Error sending reset link';
-          errorDiv.classList.remove('hidden');
-          return;
-        }
-
-        localStorage.setItem('resetToken', data.token);
-        successDiv.textContent = 'Reset token: ' + data.token;
-        successDiv.classList.remove('hidden');
-        setTimeout(() => switchTab('reset'), 2000);
-      } catch (err) {
-        errorDiv.textContent = 'Error: ' + err.message;
-        errorDiv.classList.remove('hidden');
-      }
-    }
-
-    async function resetPassword() {
-      const resetToken = document.getElementById('resetToken').value;
-      const newPassword = document.getElementById('resetPassword').value;
-      const errorDiv = document.getElementById('authError');
-      const successDiv = document.getElementById('authSuccess');
-
-      if (!resetToken || !newPassword) {
-        errorDiv.textContent = 'Please fill all fields';
-        errorDiv.classList.remove('hidden');
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API}/auth/reset-password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resetToken, newPassword })
-        });
-        const data = await res.json();
-        
-        if (!res.ok) {
-          errorDiv.textContent = data.error || 'Reset failed';
-          errorDiv.classList.remove('hidden');
-          return;
-        }
-
-        successDiv.textContent = 'Password reset successful! Logging you in...';
-        successDiv.classList.remove('hidden');
-        document.getElementById('resetToken').value = '';
-        document.getElementById('resetPassword').value = '';
-        setTimeout(() => switchTab('login'), 2000);
-      } catch (err) {
-        errorDiv.textContent = 'Error: ' + err.message;
-        errorDiv.classList.remove('hidden');
-      }
-    }
-
     function logout() {
       localStorage.removeItem('token');
       localStorage.removeItem('userName');
@@ -386,15 +240,17 @@
             currentCategory = s.category;
             html += `<h3 class="category-title"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span>${s.category.toUpperCase()}</h3>`;
           }
+          const commission = (parseFloat(s.price) * 0.20).toFixed(2);
+          const total = (parseFloat(s.price) + parseFloat(commission)).toFixed(2);
           html += `
             <div class="card">
               <h3>${s.name}</h3>
               <p>${s.description}</p>
-              <p>Duration: ${s.duration_minutes} min | Price: <span class="price">$${s.price}</span></p>
+              <p>Duration: ${s.duration_minutes} min | Base: $${s.price} + Commission: $${commission} = Total: <span class="price">$${total}</span></p>
               <p style="color: #28a745; font-weight: bold;">✓ Available in 43 cities</p>
             </div>
           `;
-          selectOptions += `<option value="${s.id}">${s.name} - $${s.price}</option>`;
+          selectOptions += `<option value="${s.id}">${s.name} - $${total}</option>`;
         });
 
         servicesDiv.innerHTML = html;
@@ -404,90 +260,14 @@
       }
     }
 
-    async function loadSubscription() {
-      try {
-        const res = await fetch(`${API}/subscription`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const sub = await res.json();
-        document.getElementById('planBadge').textContent = sub.plan.toUpperCase() + ' Plan';
-        document.getElementById('planBadge').style.background = sub.plan === 'premium' ? '#667eea' : sub.plan === 'pro' ? '#764ba2' : '#999';
-        document.getElementById('bookingCount').textContent = `${sub.monthly_bookings}/${sub.booking_limit}`;
-        document.getElementById('currentPlan').innerHTML = `<strong>Current Plan: ${sub.plan.toUpperCase()} (${sub.monthly_bookings}/${sub.booking_limit} bookings)</strong>`;
-      } catch (err) {
-        console.error('Error loading subscription:', err);
-      }
-    }
-
     async function loadEarnings() {
       try {
         const res = await fetch(`${API}/earnings`);
         const earnings = await res.json();
-        document.getElementById('totalEarnings').textContent = `$${parseFloat(earnings.total_commission).toFixed(2)}`;
-        document.getElementById('totalBookings').textContent = earnings.total_bookings;
+        document.getElementById('totalEarnings').textContent = `$${parseFloat(earnings.total_commission || 0).toFixed(2)}`;
+        document.getElementById('totalBookings').textContent = earnings.total_bookings || 0;
       } catch (err) {
         console.error('Error loading earnings:', err);
-      }
-    }
-
-    function showUpgradeModal() {
-      document.getElementById('upgradeModal').classList.remove('hidden');
-    }
-
-    function closeUpgradeModal() {
-      document.getElementById('upgradeModal').classList.add('hidden');
-    }
-
-    async function upgradePlan(plan) {
-      try {
-        const res = await fetch(`${API}/subscription/upgrade`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ plan })
-        });
-        const data = await res.json();
-        alert(data.message);
-        closeUpgradeModal();
-        loadSubscription();
-        loadEarnings();
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    }
-
-    async function loadPublicServices() {
-      try {
-        const res = await fetch(`${API}/services`);
-        const services = await res.json();
-        const publicServicesDiv = document.getElementById('publicServices');
-        
-        let html = '';
-        let currentCategory = '';
-
-        services.forEach(s => {
-          if (currentCategory !== s.category) {
-            currentCategory = s.category;
-            html += `<h3 style="color: #333; margin-top: 15px; margin-bottom: 10px;"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span>${s.category.toUpperCase()}</h3>`;
-          }
-          const commission = (parseFloat(s.price) * 0.20).toFixed(2);
-          const total = (parseFloat(s.price) + parseFloat(commission)).toFixed(2);
-          html += `
-            <div class="card">
-              <h3>${s.name}</h3>
-              <p>${s.description}</p>
-              <p><strong>Duration:</strong> ${s.duration_minutes} min</p>
-              <p><strong>Base Price:</strong> $${s.price} + <strong>Commission:</strong> $${commission} = <strong>Total:</strong> <span class="price">$${total}</span></p>
-              <p style="color: #28a745; font-weight: bold;">✓ Available in 43 cities</p>
-            </div>
-          `;
-        });
-
-        publicServicesDiv.innerHTML = html;
-      } catch (err) {
-        console.error('Error loading public services:', err);
       }
     }
 
@@ -540,6 +320,7 @@
         if (xhr.status === 200) {
           alert('Booking cancelled successfully');
           loadBookings();
+          loadEarnings();
         } else {
           alert('Error: ' + (xhr.responseText || 'Failed to cancel'));
         }
@@ -576,15 +357,13 @@
         
         if (res.ok) {
           const data = await res.json();
-          alert(`Booking created!\nBase Price: $${parseFloat(data.totalPaid - data.commission).toFixed(2)}\nCommission: $${parseFloat(data.commission).toFixed(2)}\nTotal: $${parseFloat(data.totalPaid).toFixed(2)}`);
+          alert('Booking created! Commission: $' + parseFloat(data.commission).toFixed(2));
           document.getElementById('date').value = '';
           document.getElementById('time').value = '';
           document.getElementById('address').value = '';
           document.getElementById('city').value = '';
           document.getElementById('service').value = '';
-          document.getElementById('priceDisplay').textContent = 'Price: calculating...';
           loadBookings();
-          loadSubscription();
           loadEarnings();
         } else {
           const data = await res.json();
@@ -594,22 +373,6 @@
         alert('Error: ' + err.message);
       }
     }
-
-    // Update price display when service changes
-    document.addEventListener('change', async (e) => {
-      if (e.target.id === 'service' && e.target.value !== 'Select a service') {
-        const serviceId = e.target.value;
-        const res = await fetch(`${API}/services`);
-        const services = await res.json();
-        const service = services.find(s => s.id === serviceId);
-        if (service) {
-          const basePrice = parseFloat(service.price);
-          const commission = basePrice * 0.20;
-          const total = basePrice + commission;
-          document.getElementById('priceDisplay').innerHTML = `Price: $${basePrice.toFixed(2)} + Commission $${commission.toFixed(2)} = <strong style="color: #764ba2;">Total $${total.toFixed(2)}</strong>`;
-        }
-      }
-    });
   </script>
 </body>
 </html>
