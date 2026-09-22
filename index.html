@@ -51,6 +51,9 @@
           <p style="text-align: center; margin-top: 10px;">
             Don't have an account? <a href="#" onclick="switchTab('signup'); return false;" class="link">Sign Up</a>
           </p>
+          <p style="text-align: center; margin-top: 10px;">
+            <a href="#" onclick="switchTab('browse'); return false;" class="link">👀 Browse All Services</a>
+          </p>
         </div>
 
         <div id="signupForm" class="hidden">
@@ -61,6 +64,16 @@
           <button onclick="signup()" style="width: 100%;">Sign Up</button>
           <p style="text-align: center; margin-top: 10px;">
             Already have an account? <a href="#" onclick="switchTab('login'); return false;" class="link">Login</a>
+          </p>
+        </div>
+
+        <div id="browseForm" class="hidden" style="max-height: 600px; overflow-y: auto;">
+          <h3>👀 Browse All Services</h3>
+          <p style="color: #666; margin-bottom: 15px;">Explore our 44 services across 10 categories available in 43 cities worldwide!</p>
+          <div id="publicServicesList" style="margin-bottom: 20px;"></div>
+          <p style="text-align: center; margin-top: 15px;">
+            <a href="#" onclick="switchTab('signup'); return false;" class="link">Sign Up to Book</a> | 
+            <a href="#" onclick="switchTab('login'); return false;" class="link">Login</a>
           </p>
         </div>
       </div>
@@ -161,8 +174,10 @@
     function switchTab(tab) {
       document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
       document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+      document.getElementById('browseForm').classList.toggle('hidden', tab !== 'browse');
       document.getElementById('authError').classList.add('hidden');
       document.getElementById('authSuccess').classList.add('hidden');
+      if (tab === 'browse') loadPublicServices();
     }
 
     async function signup() {
@@ -393,6 +408,41 @@
       };
       
       xhr.send(JSON.stringify({ status: 'cancelled' }));
+    }
+
+    async function loadPublicServices() {
+      try {
+        const res = await fetch(`${API}/services`);
+        const services = await res.json();
+        const publicServicesDiv = document.getElementById('publicServicesList');
+        
+        let html = '';
+        let currentCategory = '';
+        let serviceCount = 0;
+
+        services.forEach(s => {
+          if (currentCategory !== s.category) {
+            currentCategory = s.category;
+            html += `<h4 style="color: #333; margin-top: 20px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #667eea;"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span> ${s.category.toUpperCase()}</h4>`;
+          }
+          const commission = (parseFloat(s.price) * 0.20).toFixed(2);
+          const total = (parseFloat(s.price) + parseFloat(commission)).toFixed(2);
+          html += `
+            <div style="background: #f9f9f9; padding: 12px; border-radius: 5px; margin-bottom: 10px; border-left: 3px solid #667eea;">
+              <p style="font-weight: bold; color: #333; margin-bottom: 5px;">${s.name}</p>
+              <p style="font-size: 0.9em; color: #666; margin-bottom: 5px;">${s.description}</p>
+              <p style="font-size: 0.85em; color: #999; margin-bottom: 5px;">⏱️ ${s.duration_minutes} min | 💰 $${total}</p>
+              <p style="font-size: 0.85em; color: #28a745;">✓ Available in 43 cities</p>
+            </div>
+          `;
+          serviceCount++;
+        });
+
+        html += `<p style="text-align: center; color: #667eea; font-weight: bold; margin-top: 20px;">Total: ${serviceCount} Services</p>`;
+        publicServicesDiv.innerHTML = html;
+      } catch (err) {
+        console.error('Error loading public services:', err);
+      }
     }
 
     async function createBooking() {
