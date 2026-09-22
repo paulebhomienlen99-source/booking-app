@@ -117,10 +117,10 @@
       <div class="card">
         <h2>Make a Booking</h2>
         <select id="service" required><option>Select a service</option></select>
+        <select id="city" required><option>Select a city</option></select>
         <input type="date" id="date" required>
         <input type="time" id="time" required>
         <input type="text" id="address" placeholder="Address" required>
-        <input type="text" id="city" placeholder="City" required>
         <button onclick="createBooking()" style="width: 100%;">Book Now</button>
       </div>
 
@@ -149,6 +149,7 @@
       document.getElementById('authSection').classList.add('hidden');
       document.getElementById('appSection').classList.remove('hidden');
       document.getElementById('userName').textContent = userName || 'User';
+      loadCities();
       loadServices();
       loadBookings();
       setInterval(loadBookings, 5000);
@@ -313,6 +314,24 @@
       switchTab('login');
     }
 
+    async function loadCities() {
+      try {
+        const res = await fetch(`${API}/cities`);
+        const cities = await res.json();
+        const citySelect = document.getElementById('city');
+        
+        let selectOptions = '<option>Select a city</option>';
+        
+        cities.forEach(c => {
+          selectOptions += `<option value="${c.name}">${c.name}, ${c.country}</option>`;
+        });
+
+        citySelect.innerHTML = selectOptions;
+      } catch (err) {
+        console.error('Error loading cities:', err);
+      }
+    }
+
     async function loadServices() {
       try {
         const res = await fetch(`${API}/services`);
@@ -347,7 +366,7 @@
       }
     }
 
-    async function loadPublicServices() {
+    async function loadServices() {
       try {
         const res = await fetch(`${API}/services`);
         const services = await res.json();

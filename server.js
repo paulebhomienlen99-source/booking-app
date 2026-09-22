@@ -22,8 +22,11 @@ async function initDB() {
   try {
     await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, reset_token VARCHAR(255), reset_token_expires TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS cities (id UUID PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE, country VARCHAR(100) NOT NULL, region VARCHAR(100))`);
+    await client.query(`CREATE TABLE IF NOT EXISTS service_cities (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id), city_id UUID NOT NULL REFERENCES cities(id), available BOOLEAN DEFAULT true, UNIQUE(service_id, city_id))`);
     await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, address VARCHAR(255), city VARCHAR(100), status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     
+    // Insert services
     await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price) VALUES 
       ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'salon', 30, 25.00),
       ('550e8400-e29b-41d4-a716-446655440002', 'Massage', 'Relaxing full-body massage', 'salon', 60, 80.00),
@@ -37,7 +40,68 @@ async function initDB() {
       ('550e8400-e29b-41d4-a716-446655440010', '4-Star Hotel', 'Comfortable hotel with great service', 'hotel', 1440, 150.00),
       ('550e8400-e29b-41d4-a716-446655440011', 'Budget Hotel', 'Affordable hotel rooms', 'hotel', 1440, 75.00)
       ON CONFLICT DO NOTHING`);
-    console.log('Database initialized');
+    
+    // Insert cities
+    await client.query(`INSERT INTO cities (id, name, country, region) VALUES 
+      ('c01-usa-1', 'New York', 'USA', 'New York'),
+      ('c02-usa-2', 'Los Angeles', 'USA', 'California'),
+      ('c03-usa-3', 'Chicago', 'USA', 'Illinois'),
+      ('c04-usa-4', 'Houston', 'USA', 'Texas'),
+      ('c05-usa-5', 'Miami', 'USA', 'Florida'),
+      ('c06-usa-6', 'San Francisco', 'USA', 'California'),
+      ('c07-usa-7', 'Boston', 'USA', 'Massachusetts'),
+      ('c08-usa-8', 'Seattle', 'USA', 'Washington'),
+      ('c09-ita-1', 'Milan', 'Italy', 'Lombardy'),
+      ('c10-ita-2', 'Rome', 'Italy', 'Lazio'),
+      ('c11-ita-3', 'Venice', 'Italy', 'Veneto'),
+      ('c12-fra-1', 'Paris', 'France', 'Île-de-France'),
+      ('c13-fra-2', 'Lyon', 'France', 'Rhône-Alpes'),
+      ('c14-fra-3', 'Marseille', 'France', 'Provence'),
+      ('c15-ger-1', 'Berlin', 'Germany', 'Berlin'),
+      ('c16-ger-2', 'Munich', 'Germany', 'Bavaria'),
+      ('c17-ger-3', 'Hamburg', 'Germany', 'Hamburg'),
+      ('c18-ger-4', 'Frankfurt', 'Germany', 'Hesse'),
+      ('c19-uk-1', 'London', 'United Kingdom', 'England'),
+      ('c20-uk-2', 'Manchester', 'United Kingdom', 'England'),
+      ('c21-uk-3', 'Edinburgh', 'United Kingdom', 'Scotland'),
+      ('c22-esp-1', 'Madrid', 'Spain', 'Community of Madrid'),
+      ('c23-esp-2', 'Barcelona', 'Spain', 'Catalonia'),
+      ('c24-esp-3', 'Valencia', 'Spain', 'Community of Valencia'),
+      ('c25-ams-1', 'Amsterdam', 'Netherlands', 'North Holland'),
+      ('c26-ams-2', 'Rotterdam', 'Netherlands', 'South Holland'),
+      ('c27-bel-1', 'Brussels', 'Belgium', 'Brussels'),
+      ('c28-bel-2', 'Antwerp', 'Belgium', 'Flanders'),
+      ('c29-swe-1', 'Stockholm', 'Sweden', 'Stockholm'),
+      ('c30-swe-2', 'Gothenburg', 'Sweden', 'Västra Götaland'),
+      ('c31-nor-1', 'Oslo', 'Norway', 'Akershus'),
+      ('c32-nor-2', 'Bergen', 'Norway', 'Hordaland'),
+      ('c33-den-1', 'Copenhagen', 'Denmark', 'Capital Region'),
+      ('c34-pol-1', 'Warsaw', 'Poland', 'Masovian'),
+      ('c35-pol-2', 'Krakow', 'Poland', 'Lesser Poland'),
+      ('c36-cz-1', 'Prague', 'Czech Republic', 'Prague'),
+      ('c37-hun-1', 'Budapest', 'Hungary', 'Budapest'),
+      ('c38-aut-1', 'Vienna', 'Austria', 'Vienna'),
+      ('c39-aut-2', 'Salzburg', 'Austria', 'Salzburg'),
+      ('c40-eur-1', 'Zurich', 'Switzerland', 'Zurich'),
+      ('c41-eur-2', 'Geneva', 'Switzerland', 'Geneva'),
+      ('c42-eur-3', 'Lisbon', 'Portugal', 'Lisbon'),
+      ('c43-eur-4', 'Dublin', 'Ireland', 'Dublin')
+      ON CONFLICT DO NOTHING`);
+    
+    // Insert service-city mappings (all services available in all cities)
+    const servicesRes = await client.query('SELECT id FROM services');
+    const citiesRes = await client.query('SELECT id FROM cities');
+    
+    for (const service of servicesRes.rows) {
+      for (const city of citiesRes.rows) {
+        await client.query(
+          `INSERT INTO service_cities (id, service_id, city_id, available) VALUES ($1, $2, $3, true) ON CONFLICT DO NOTHING`,
+          [uuidv4(), service.id, city.id]
+        );
+      }
+    }
+    
+    console.log('Database initialized with cities');
   } catch (err) {
     console.error('DB init error:', err.message);
   }
@@ -89,7 +153,7 @@ app.post('/auth/forgot-password', async (req, res) => {
     if (result.rows.length === 0) return res.status(401).json({ error: 'Email not found' });
     
     const resetToken = uuidv4();
-    const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
+    const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000);
     
     await client.query('UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3', [resetToken, expiresAt, email]);
     
@@ -123,9 +187,9 @@ app.get('/services', async (req, res) => {
   }
 });
 
-app.get('/services/availability', async (req, res) => {
+app.get('/cities', async (req, res) => {
   try {
-    const result = await client.query('SELECT id, name, category, duration_minutes, price FROM services ORDER BY category, name');
+    const result = await client.query('SELECT name, country, region FROM cities ORDER BY country, name');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
