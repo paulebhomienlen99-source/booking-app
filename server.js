@@ -62,7 +62,15 @@ async function initDB() {
       ('550e8400-e29b-41d4-a716-446655440017', 'Pet Care Services', 'Dog walking and pet sitting', 'home', 60, 35.00),
       ('550e8400-e29b-41d4-a716-446655440018', 'Laundry Service', 'Professional laundry and ironing', 'home', 120, 50.00),
       ('550e8400-e29b-41d4-a716-446655440019', 'House Maintenance', 'General repairs and maintenance', 'home', 120, 75.00),
-      ('550e8400-e29b-41d4-a716-446655440020', 'Grocery Delivery', 'Fresh groceries at your doorstep', 'supermarket', 60, 25.00)
+      ('550e8400-e29b-41d4-a716-446655440020', 'Grocery Delivery', 'Fresh groceries at your doorstep', 'supermarket', 60, 25.00),
+      ('550e8400-e29b-41d4-a716-446655440021', 'Baby Sitting - 4 Hours', 'Professional baby sitting service', 'childcare', 240, 60.00),
+      ('550e8400-e29b-41d4-a716-446655440022', 'Baby Sitting - 8 Hours', 'Full day baby sitting service', 'childcare', 480, 100.00),
+      ('550e8400-e29b-41d4-a716-446655440023', 'Newborn Care', 'Specialized newborn care and feeding', 'childcare', 240, 80.00),
+      ('550e8400-e29b-41d4-a716-446655440024', 'Dog Day Care', 'Full day dog care and exercise', 'petcare', 480, 50.00),
+      ('550e8400-e29b-41d4-a716-446655440025', 'Dog Grooming', 'Professional dog grooming service', 'petcare', 180, 75.00),
+      ('550e8400-e29b-41d4-a716-446655440026', 'Dog Training', 'Professional dog training session', 'petcare', 120, 65.00),
+      ('550e8400-e29b-41d4-a716-446655440027', 'Dog Walking - 30 min', 'Quick dog walking service', 'petcare', 30, 20.00),
+      ('550e8400-e29b-41d4-a716-446655440028', 'Pet Sitting', 'Care for pets while you are away', 'petcare', 240, 45.00)
       ON CONFLICT DO NOTHING`);
     console.log('✓ Services inserted');
     
