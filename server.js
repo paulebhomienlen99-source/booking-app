@@ -78,7 +78,15 @@ async function initDB() {
       ('550e8400-e29b-41d4-a716-446655440033', 'Pilates Class', 'Core strengthening pilates class', 'gym', 60, 35.00),
       ('550e8400-e29b-41d4-a716-446655440034', 'Spinning Class', 'Indoor cycling class', 'gym', 45, 25.00),
       ('550e8400-e29b-41d4-a716-446655440035', 'Swimming Session', 'Pool session with instructor', 'gym', 60, 40.00),
-      ('550e8400-e29b-41d4-a716-446655440036', 'Zumba Class', 'Fun dance fitness class', 'gym', 60, 25.00)
+      ('550e8400-e29b-41d4-a716-446655440036', 'Zumba Class', 'Fun dance fitness class', 'gym', 60, 25.00),
+      ('550e8400-e29b-41d4-a716-446655440037', 'Cozy Home Rental - 1 Night', 'Comfortable home rental for family', 'accommodation', 1440, 85.00),
+      ('550e8400-e29b-41d4-a716-446655440038', 'Luxury Home Rental - 1 Night', 'Premium home with modern amenities', 'accommodation', 1440, 150.00),
+      ('550e8400-e29b-41d4-a716-446655440039', 'Vacation Home - 1 Week', 'Full week vacation home rental', 'accommodation', 10080, 500.00),
+      ('550e8400-e29b-41d4-a716-446655440040', 'Bed & Breakfast - Standard', 'Cozy B&B with breakfast included', 'accommodation', 1440, 70.00),
+      ('550e8400-e29b-41d4-a716-446655440041', 'Bed & Breakfast - Deluxe', 'Luxury B&B with premium breakfast', 'accommodation', 1440, 110.00),
+      ('550e8400-e29b-41d4-a716-446655440042', 'B&B Package - 2 Nights', 'Two nights B&B stay with meals', 'accommodation', 2880, 180.00),
+      ('550e8400-e29b-41d4-a716-446655440043', 'Farm Stay Experience', 'Authentic farm stay with activities', 'accommodation', 1440, 95.00),
+      ('550e8400-e29b-41d4-a716-446655440044', 'Beach House Rental - 1 Night', 'Beachfront house with ocean view', 'accommodation', 1440, 200.00)
       ON CONFLICT DO NOTHING`);
     console.log('✓ Services inserted');
     
