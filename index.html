@@ -241,6 +241,26 @@
       loadEarnings();
       loadBookings();
       setInterval(loadBookings, 5000);
+      autoDetectLocation();
+    }
+
+    function autoDetectLocation() {
+      if (!navigator.geolocation) return;
+      
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          userLat = position.coords.latitude;
+          userLng = position.coords.longitude;
+          
+          document.getElementById('locationInfo').style.display = 'block';
+          document.getElementById('locationCoords').textContent = userLat.toFixed(4) + ', ' + userLng.toFixed(4);
+          
+          initMap();
+        },
+        function(error) {
+          console.log('Auto-location failed (this is optional): ' + error.message);
+        }
+      );
     }
 
     function switchTab(tab) {
