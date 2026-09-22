@@ -70,7 +70,15 @@ async function initDB() {
       ('550e8400-e29b-41d4-a716-446655440025', 'Dog Grooming', 'Professional dog grooming service', 'petcare', 180, 75.00),
       ('550e8400-e29b-41d4-a716-446655440026', 'Dog Training', 'Professional dog training session', 'petcare', 120, 65.00),
       ('550e8400-e29b-41d4-a716-446655440027', 'Dog Walking - 30 min', 'Quick dog walking service', 'petcare', 30, 20.00),
-      ('550e8400-e29b-41d4-a716-446655440028', 'Pet Sitting', 'Care for pets while you are away', 'petcare', 240, 45.00)
+      ('550e8400-e29b-41d4-a716-446655440028', 'Pet Sitting', 'Care for pets while you are away', 'petcare', 240, 45.00),
+      ('550e8400-e29b-41d4-a716-446655440029', 'Gym Membership - Monthly', 'Full month gym access', 'gym', 2880, 45.00),
+      ('550e8400-e29b-41d4-a716-446655440030', 'Personal Training - 1 Hour', 'One-on-one personal training session', 'gym', 60, 70.00),
+      ('550e8400-e29b-41d4-a716-446655440031', 'Yoga Class - 1 Hour', 'Relaxing yoga class for all levels', 'gym', 60, 30.00),
+      ('550e8400-e29b-41d4-a716-446655440032', 'CrossFit Training', 'High-intensity CrossFit workout', 'gym', 60, 50.00),
+      ('550e8400-e29b-41d4-a716-446655440033', 'Pilates Class', 'Core strengthening pilates class', 'gym', 60, 35.00),
+      ('550e8400-e29b-41d4-a716-446655440034', 'Spinning Class', 'Indoor cycling class', 'gym', 45, 25.00),
+      ('550e8400-e29b-41d4-a716-446655440035', 'Swimming Session', 'Pool session with instructor', 'gym', 60, 40.00),
+      ('550e8400-e29b-41d4-a716-446655440036', 'Zumba Class', 'Fun dance fitness class', 'gym', 60, 25.00)
       ON CONFLICT DO NOTHING`);
     console.log('✓ Services inserted');
     
