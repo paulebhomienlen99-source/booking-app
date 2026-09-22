@@ -224,9 +224,18 @@
             <p>📅 ${b.booking_date} at ${b.booking_time}</p>
             <p>💰 <span class="price">$${b.price}</span></p>
             <p>Status: <span class="status-${b.status}">${b.status.toUpperCase()}</span></p>
-            ${b.status !== 'cancelled' ? `<button class="cancel-btn" onclick="cancelBooking('${b.id}')">Cancel Booking</button>` : ''}
+            ${b.status !== 'cancelled' ? `<button class="cancel-btn" data-booking-id="${b.id}">Cancel Booking</button>` : ''}
           </div>
         `).join('');
+        
+        // Add event listeners to cancel buttons
+        document.querySelectorAll('.cancel-btn').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const bookingId = this.getAttribute('data-booking-id');
+            cancelBooking(bookingId);
+          });
+        });
       } catch (err) {
         console.error('Error loading bookings:', err);
       }
