@@ -123,6 +123,15 @@ app.get('/services', async (req, res) => {
   }
 });
 
+app.get('/services/availability', async (req, res) => {
+  try {
+    const result = await client.query('SELECT id, name, category, duration_minutes, price FROM services ORDER BY category, name');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/bookings', verifyToken, async (req, res) => {
   const { service_id, booking_date, booking_time, address, city } = req.body;
   const id = uuidv4();

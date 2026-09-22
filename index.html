@@ -58,6 +58,9 @@
           <p style="text-align: center; margin-top: 5px;">
             <a href="#" onclick="switchTab('forgot'); return false;" class="link">Forgot Password?</a>
           </p>
+          <p style="text-align: center; margin-top: 10px;">
+            <a href="#" onclick="switchTab('browse'); return false;" class="link">Browse Available Services</a>
+          </p>
         </div>
 
         <div id="signupForm" class="hidden">
@@ -87,6 +90,15 @@
           <input type="password" id="resetPassword" placeholder="New Password" required>
           <button onclick="resetPassword()" style="width: 100%;">Reset Password</button>
           <p style="text-align: center; margin-top: 10px;">
+            <a href="#" onclick="switchTab('login'); return false;" class="link">Back to Login</a>
+          </p>
+        </div>
+
+        <div id="browseForm" class="hidden">
+          <h3>Available Services</h3>
+          <p style="color: #666; margin-bottom: 15px;">Check out all our available services. Sign up to book!</p>
+          <div id="publicServices"></div>
+          <p style="text-align: center; margin-top: 15px;">
             <a href="#" onclick="switchTab('login'); return false;" class="link">Back to Login</a>
           </p>
         </div>
@@ -147,8 +159,10 @@
       document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
       document.getElementById('forgotForm').classList.toggle('hidden', tab !== 'forgot');
       document.getElementById('resetForm').classList.toggle('hidden', tab !== 'reset');
+      document.getElementById('browseForm').classList.toggle('hidden', tab !== 'browse');
       document.getElementById('authError').classList.add('hidden');
       document.getElementById('authSuccess').classList.add('hidden');
+      if (tab === 'browse') loadPublicServices();
     }
 
     async function signup() {
@@ -320,6 +334,7 @@
               <h3>${s.name}</h3>
               <p>${s.description}</p>
               <p>Duration: ${s.duration_minutes} min | Price: <span class="price">$${s.price}</span></p>
+              <p style="color: #28a745; font-weight: bold;">✓ Available</p>
             </div>
           `;
           selectOptions += `<option value="${s.id}">${s.name} - $${s.price}</option>`;
@@ -329,6 +344,37 @@
         serviceSelect.innerHTML = selectOptions;
       } catch (err) {
         console.error('Error loading services:', err);
+      }
+    }
+
+    async function loadPublicServices() {
+      try {
+        const res = await fetch(`${API}/services`);
+        const services = await res.json();
+        const publicServicesDiv = document.getElementById('publicServices');
+        
+        let html = '';
+        let currentCategory = '';
+
+        services.forEach(s => {
+          if (currentCategory !== s.category) {
+            currentCategory = s.category;
+            html += `<h3 class="category-title" style="color: #333; margin-top: 20px;"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span>${s.category.toUpperCase()}</h3>`;
+          }
+          html += `
+            <div class="card">
+              <h3>${s.name}</h3>
+              <p>${s.description}</p>
+              <p><strong>Duration:</strong> ${s.duration_minutes} min</p>
+              <p><strong>Price:</strong> <span class="price">$${s.price}</span></p>
+              <p style="color: #28a745; font-weight: bold;">✓ Available Now</p>
+            </div>
+          `;
+        });
+
+        publicServicesDiv.innerHTML = html;
+      } catch (err) {
+        console.error('Error loading public services:', err);
       }
     }
 
