@@ -86,7 +86,27 @@ async function initDB() {
       ('550e8400-e29b-41d4-a716-446655440041', 'Bed & Breakfast - Deluxe', 'Luxury B&B with premium breakfast', 'accommodation', 1440, 110.00),
       ('550e8400-e29b-41d4-a716-446655440042', 'B&B Package - 2 Nights', 'Two nights B&B stay with meals', 'accommodation', 2880, 180.00),
       ('550e8400-e29b-41d4-a716-446655440043', 'Farm Stay Experience', 'Authentic farm stay with activities', 'accommodation', 1440, 95.00),
-      ('550e8400-e29b-41d4-a716-446655440044', 'Beach House Rental - 1 Night', 'Beachfront house with ocean view', 'accommodation', 1440, 200.00)
+      ('550e8400-e29b-41d4-a716-446655440044', 'Beach House Rental - 1 Night', 'Beachfront house with ocean view', 'accommodation', 1440, 200.00),
+      ('550e8400-e29b-41d4-a716-446655440045', 'Web Design Service', 'Professional website design and development', 'marketplace', 480, 150.00),
+      ('550e8400-e29b-41d4-a716-446655440046', 'Logo Design', 'Custom logo and branding design', 'marketplace', 240, 100.00),
+      ('550e8400-e29b-41d4-a716-446655440047', 'Social Media Management', 'Monthly social media content and posting', 'marketplace', 2880, 200.00),
+      ('550e8400-e29b-41d4-a716-446655440048', 'Content Writing - Blog Post', 'Professional blog post writing (1000 words)', 'marketplace', 120, 50.00),
+      ('550e8400-e29b-41d4-a716-446655440049', 'Video Editing Service', 'Professional video editing and production', 'marketplace', 360, 120.00),
+      ('550e8400-e29b-41d4-a716-446655440050', 'Photography Session - 2 Hours', 'Professional photo shoot session', 'marketplace', 120, 150.00),
+      ('550e8400-e29b-41d4-a716-446655440051', 'Wedding Photography - Full Day', 'Complete wedding day photography service', 'marketplace', 480, 500.00),
+      ('550e8400-e29b-41d4-a716-446655440052', 'Portrait Photography', 'Professional portrait and headshot session', 'marketplace', 90, 100.00),
+      ('550e8400-e29b-41d4-a716-446655440053', 'English Tutoring - 1 Hour', 'One-on-one English language tutoring', 'marketplace', 60, 40.00),
+      ('550e8400-e29b-41d4-a716-446655440054', 'Math Tutoring - 1 Hour', 'Professional mathematics tutoring', 'marketplace', 60, 45.00),
+      ('550e8400-e29b-41d4-a716-446655440055', 'Piano Lessons - 1 Hour', 'Professional piano instruction', 'marketplace', 60, 50.00),
+      ('550e8400-e29b-41d4-a716-446655440056', 'Guitar Lessons - 1 Hour', 'Guitar instruction for all levels', 'marketplace', 60, 40.00),
+      ('550e8400-e29b-41d4-a716-446655440057', 'Handyman Services - 1 Hour', 'General home repairs and maintenance', 'marketplace', 60, 55.00),
+      ('550e8400-e29b-41d4-a716-446655440058', 'Plumbing Repair', 'Professional plumbing services', 'marketplace', 120, 85.00),
+      ('550e8400-e29b-41d4-a716-446655440059', 'Electrical Work', 'Licensed electrician services', 'marketplace', 120, 95.00),
+      ('550e8400-e29b-41d4-a716-446655440060', 'House Painting - Per Room', 'Professional interior/exterior painting', 'marketplace', 240, 150.00),
+      ('550e8400-e29b-41d4-a716-446655440061', 'Freelance Accounting - 1 Hour', 'Small business accounting consultation', 'marketplace', 60, 60.00),
+      ('550e8400-e29b-41d4-a716-446655440062', 'Business Consulting - 1 Hour', 'Strategic business advice and planning', 'marketplace', 60, 75.00),
+      ('550e8400-e29b-41d4-a716-446655440063', 'Resume Writing Service', 'Professional resume and cover letter', 'marketplace', 90, 50.00),
+      ('550e8400-e29b-41d4-a716-446655440064', 'Interview Coaching - 1 Hour', 'Job interview preparation and coaching', 'marketplace', 60, 55.00)
       ON CONFLICT DO NOTHING`);
     console.log('✓ Services inserted');
     
