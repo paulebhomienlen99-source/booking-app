@@ -46,7 +46,16 @@ async function initDB() {
       ('550e8400-e29b-41d4-a716-446655440008', 'Premium Taxi', 'Luxury taxi service', 'taxi', 30, 30.00),
       ('550e8400-e29b-41d4-a716-446655440009', '5-Star Hotel', 'Luxury hotel with all amenities', 'hotel', 1440, 250.00),
       ('550e8400-e29b-41d4-a716-446655440010', '4-Star Hotel', 'Comfortable hotel with great service', 'hotel', 1440, 150.00),
-      ('550e8400-e29b-41d4-a716-446655440011', 'Budget Hotel', 'Affordable hotel rooms', 'hotel', 1440, 75.00)
+      ('550e8400-e29b-41d4-a716-446655440011', 'Budget Hotel', 'Affordable hotel rooms', 'hotel', 1440, 75.00),
+      ('550e8400-e29b-41d4-a716-446655440012', 'Supermarket Shopping', 'Full grocery shopping service', 'supermarket', 120, 40.00),
+      ('550e8400-e29b-41d4-a716-446655440013', 'Organic Groceries', 'Fresh organic produce and products', 'supermarket', 90, 60.00),
+      ('550e8400-e29b-41d4-a716-446655440014', 'Pharmacy Delivery', 'Prescription and medicine delivery', 'supermarket', 45, 15.00),
+      ('550e8400-e29b-41d4-a716-446655440015', 'Holiday Home Cleaning', 'Deep clean before holidays', 'home', 180, 120.00),
+      ('550e8400-e29b-41d4-a716-446655440016', 'Holiday Home Preparation', 'Prepare home for vacation', 'home', 120, 100.00),
+      ('550e8400-e29b-41d4-a716-446655440017', 'Pet Care Services', 'Dog walking and pet sitting', 'home', 60, 35.00),
+      ('550e8400-e29b-41d4-a716-446655440018', 'Laundry Service', 'Professional laundry and ironing', 'home', 120, 50.00),
+      ('550e8400-e29b-41d4-a716-446655440019', 'House Maintenance', 'General repairs and maintenance', 'home', 120, 75.00),
+      ('550e8400-e29b-41d4-a716-446655440020', 'Grocery Delivery', 'Fresh groceries at your doorstep', 'supermarket', 60, 25.00)
       ON CONFLICT DO NOTHING`);
     console.log('✓ Services inserted');
     
