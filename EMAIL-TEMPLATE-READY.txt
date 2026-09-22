@@ -1,0 +1,56 @@
+================================================================================
+EMAIL TEMPLATE - COPY & SEND TO 100 FRIENDS
+================================================================================
+
+TO: Send to 100 friends/contacts
+CC/BCC: Split into groups of 50 max
+
+SUBJECT:
+I built BookHub 🚀 - Service booking app with GPS tracking
+
+BODY:
+Hey [Name],
+
+I just launched BookHub - I'd love for you to try it:
+https://booking-app-paulebhomienlen-646825d168bf.herokuapp.com/
+
+**What is BookHub?**
+One app for booking any service: haircuts, hotels, tutoring, plumbing, photography, gym classes, restaurants, and 56+ other services. Real-time GPS shows exactly where your service provider is.
+
+**Why I built it:**
+Finding and booking services is broken. You visit 10+ different websites. BookHub fixes this in one place.
+
+**How it works:**
+1. Browse 64+ services
+2. Pick your date & time
+3. Book in 30 seconds
+4. See real-time location on map
+
+**Try it:** https://booking-app-paulebhomienlen-646825d168bf.herokuapp.com/
+
+**Please:**
+- Sign up and make a booking
+- Send feedback
+- Share with friends if you like it
+
+Thanks!
+[Your Name]
+
+================================================================================
+QUICK SEND INSTRUCTIONS:
+================================================================================
+
+Gmail Method:
+1. Open Gmail
+2. Click "Compose"
+3. Copy the email body above into the message
+4. In "To" field, click "BCC" (not CC!)
+5. Add 50 email addresses separated by commas
+6. Click "Send"
+7. Repeat for next 50 people
+
+Time: 5-10 minutes for 100 emails
+
+Expected responses: 5-10 clicks, 1-2 signups
+
+================================================================================
