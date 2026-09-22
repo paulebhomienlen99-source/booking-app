@@ -33,10 +33,6 @@
     .status-pending { color: #ffc107; font-weight: bold; }
     .status-confirmed { color: #28a745; font-weight: bold; }
     .link { color: #667eea; cursor: pointer; text-decoration: underline; }
-    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-    .modal.show { display: flex; }
-    .modal-content { background: white; padding: 30px; border-radius: 10px; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-    .modal-close { float: right; cursor: pointer; font-size: 24px; color: #999; }
   </style>
 </head>
 <body>
@@ -97,7 +93,7 @@
         <div id="browseForm" class="hidden">
           <h3>Available Services</h3>
           <p style="color: #666; margin-bottom: 15px;">Check out all our available services. Sign up to book!</p>
-          <div id="publicServices"></div>
+          <div id="publicServices" style="max-height: 400px; overflow-y: auto;"></div>
           <p style="text-align: center; margin-top: 15px;">
             <a href="#" onclick="switchTab('login'); return false;" class="link">Back to Login</a>
           </p>
@@ -259,7 +255,7 @@
         }
 
         localStorage.setItem('resetToken', data.token);
-        successDiv.textContent = 'Reset token generated! Copy this and use it to reset your password: ' + data.token;
+        successDiv.textContent = 'Reset token: ' + data.token;
         successDiv.classList.remove('hidden');
         setTimeout(() => switchTab('reset'), 2000);
       } catch (err) {
@@ -294,7 +290,7 @@
           return;
         }
 
-        successDiv.textContent = 'Password reset successful! You can now login with your new password.';
+        successDiv.textContent = 'Password reset successful! Logging you in...';
         successDiv.classList.remove('hidden');
         document.getElementById('resetToken').value = '';
         document.getElementById('resetPassword').value = '';
@@ -353,7 +349,7 @@
               <h3>${s.name}</h3>
               <p>${s.description}</p>
               <p>Duration: ${s.duration_minutes} min | Price: <span class="price">$${s.price}</span></p>
-              <p style="color: #28a745; font-weight: bold;">✓ Available</p>
+              <p style="color: #28a745; font-weight: bold;">✓ Available in 43 cities</p>
             </div>
           `;
           selectOptions += `<option value="${s.id}">${s.name} - $${s.price}</option>`;
@@ -366,7 +362,7 @@
       }
     }
 
-    async function loadServices() {
+    async function loadPublicServices() {
       try {
         const res = await fetch(`${API}/services`);
         const services = await res.json();
@@ -378,15 +374,14 @@
         services.forEach(s => {
           if (currentCategory !== s.category) {
             currentCategory = s.category;
-            html += `<h3 class="category-title" style="color: #333; margin-top: 20px;"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span>${s.category.toUpperCase()}</h3>`;
+            html += `<h3 style="color: #333; margin-top: 15px; margin-bottom: 10px;"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span>${s.category.toUpperCase()}</h3>`;
           }
           html += `
             <div class="card">
               <h3>${s.name}</h3>
               <p>${s.description}</p>
-              <p><strong>Duration:</strong> ${s.duration_minutes} min</p>
-              <p><strong>Price:</strong> <span class="price">$${s.price}</span></p>
-              <p style="color: #28a745; font-weight: bold;">✓ Available Now</p>
+              <p><strong>Duration:</strong> ${s.duration_minutes} min | <strong>Price:</strong> <span class="price">$${s.price}</span></p>
+              <p style="color: #28a745; font-weight: bold;">✓ Available in 43 cities</p>
             </div>
           `;
         });
@@ -465,7 +460,7 @@
       const address = document.getElementById('address').value;
       const city = document.getElementById('city').value;
 
-      if (!service_id || service_id === 'Select a service' || !booking_date || !booking_time || !address || !city) {
+      if (!service_id || service_id === 'Select a service' || !booking_date || !booking_time || !address || !city || city === 'Select a city') {
         alert('Please fill all fields');
         return;
       }
