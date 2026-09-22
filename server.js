@@ -32,6 +32,13 @@ async function initDB() {
     console.log('✓ Cities table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, address VARCHAR(255), city VARCHAR(100), status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id) UNIQUE, plan VARCHAR(50) DEFAULT 'free', booking_limit INT DEFAULT 10, monthly_bookings INT DEFAULT 0, subscription_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, next_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 month')`);
+    await client.query(`CREATE TABLE IF NOT EXISTS payments (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id), user_id UUID NOT NULL REFERENCES users(id), service_price DECIMAL(10, 2) NOT NULL, commission DECIMAL(10, 2) NOT NULL, total_paid DECIMAL(10, 2) NOT NULL, payment_status VARCHAR(50) DEFAULT 'completed', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS earnings (id UUID PRIMARY KEY, total_commission DECIMAL(12, 2) DEFAULT 0, total_bookings INT DEFAULT 0, last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    
+    // Initialize earnings tracker
+    await client.query(`INSERT INTO earnings (id) SELECT '00000000-0000-0000-0000-000000000000' WHERE NOT EXISTS (SELECT 1 FROM earnings)`);
+    console.log('✓ Subscriptions, payments, and earnings tables created');
     console.log('✓ Bookings table created');
     
     // Insert services
@@ -207,12 +214,80 @@ app.get('/cities', async (req, res) => {
   }
 });
 
+app.get('/subscription', verifyToken, async (req, res) => {
+  try {
+    let result = await client.query('SELECT plan, booking_limit, monthly_bookings, subscription_date FROM subscriptions WHERE user_id = $1', [req.userId]);
+    if (result.rows.length === 0) {
+      result = { rows: [{ plan: 'free', booking_limit: 10, monthly_bookings: 0, subscription_date: new Date() }] };
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/subscription/upgrade', verifyToken, async (req, res) => {
+  const { plan } = req.body;
+  try {
+    if (!['premium', 'pro'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
+    
+    const result = await client.query('SELECT id FROM subscriptions WHERE user_id = $1', [req.userId]);
+    if (result.rows.length === 0) {
+      await client.query('INSERT INTO subscriptions (id, user_id, plan, booking_limit) VALUES ($1, $2, $3, $4)', [uuidv4(), req.userId, plan, plan === 'premium' ? 100 : 999]);
+    } else {
+      await client.query('UPDATE subscriptions SET plan = $1, booking_limit = $2, monthly_bookings = 0 WHERE user_id = $3', [plan, plan === 'premium' ? 100 : 999, req.userId]);
+    }
+    res.json({ message: `Upgraded to ${plan} plan!` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/earnings', async (req, res) => {
+  try {
+    const result = await client.query('SELECT total_commission, total_bookings FROM earnings WHERE id = $1', ['00000000-0000-0000-0000-000000000000']);
+    res.json(result.rows[0] || { total_commission: 0, total_bookings: 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/bookings', verifyToken, async (req, res) => {
   const { service_id, booking_date, booking_time, address, city } = req.body;
   const id = uuidv4();
   try {
+    // Get service details
+    const serviceRes = await client.query('SELECT price FROM services WHERE id = $1', [service_id]);
+    if (serviceRes.rows.length === 0) return res.status(404).json({ error: 'Service not found' });
+    
+    const servicePrice = parseFloat(serviceRes.rows[0].price);
+    const commission = (servicePrice * 0.20); // 20% commission
+    const totalPaid = servicePrice + commission;
+    
+    // Check subscription limits
+    const subRes = await client.query('SELECT plan, booking_limit, monthly_bookings FROM subscriptions WHERE user_id = $1', [req.userId]);
+    const sub = subRes.rows[0] || { plan: 'free', booking_limit: 10, monthly_bookings: 0 };
+    
+    if (sub.plan === 'free' && sub.monthly_bookings >= sub.booking_limit) {
+      return res.status(403).json({ error: `Free plan limit reached (${sub.booking_limit}/month). Upgrade to Premium!` });
+    }
+    
+    // Create booking
     await client.query('INSERT INTO bookings (id, user_id, service_id, booking_date, booking_time, address, city) VALUES ($1, $2, $3, $4, $5, $6, $7)', [id, req.userId, service_id, booking_date, booking_time, address, city]);
-    res.json({ id, message: 'Booking created' });
+    
+    // Record payment
+    await client.query('INSERT INTO payments (id, booking_id, user_id, service_price, commission, total_paid) VALUES ($1, $2, $3, $4, $5, $6)', [uuidv4(), id, req.userId, servicePrice, commission, totalPaid]);
+    
+    // Update subscription monthly bookings
+    if (subRes.rows.length === 0) {
+      await client.query('INSERT INTO subscriptions (id, user_id, plan) VALUES ($1, $2, $3)', [uuidv4(), req.userId, 'free']);
+    }
+    await client.query('UPDATE subscriptions SET monthly_bookings = monthly_bookings + 1 WHERE user_id = $1', [req.userId]);
+    
+    // Update total earnings
+    await client.query('UPDATE earnings SET total_commission = total_commission + $1, total_bookings = total_bookings + 1 WHERE id = $2', [commission, '00000000-0000-0000-0000-000000000000']);
+    
+    res.json({ id, message: 'Booking created', totalPaid, commission });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

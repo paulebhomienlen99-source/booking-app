@@ -101,11 +101,40 @@
       </div>
     </div>
 
+    <div id="upgradeModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+      <div class="card" style="max-width: 500px;">
+        <span onclick="closeUpgradeModal()" style="float: right; cursor: pointer; font-size: 24px; color: #999;">&times;</span>
+        <h2>Upgrade Your Plan</h2>
+        <p style="color: #666; margin-bottom: 20px;">Get more bookings and earn more commission!</p>
+        
+        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 10px;">
+          <h4>📦 Free Plan</h4>
+          <p>10 bookings/month</p>
+          <p style="color: #28a745; font-weight: bold;">$0/month</p>
+          <button onclick="alert('Already on Free Plan')" style="width: 100%; background: #ccc; cursor: default;">Current Plan</button>
+        </div>
+        
+        <div style="border: 2px solid #667eea; padding: 15px; border-radius: 5px; margin-bottom: 10px; background: #f0f4ff;">
+          <h4>⭐ Premium Plan</h4>
+          <p>100 bookings/month</p>
+          <p style="color: #28a745; font-weight: bold;">$9.99/month</p>
+          <button onclick="upgradePlan('premium')" style="width: 100%; background: #667eea;">Upgrade Now</button>
+        </div>
+        
+        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
+          <h4>🚀 Pro Plan</h4>
+          <p>Unlimited bookings</p>
+          <p style="color: #28a745; font-weight: bold;">$19.99/month</p>
+          <button onclick="upgradePlan('pro')" style="width: 100%; background: #764ba2;">Upgrade Now</button>
+        </div>
+      </div>
+
     <div id="appSection" class="hidden">
       <header>
         <h1>📅 Booking App</h1>
         <div class="user-info">
-          <p>Welcome, <strong id="userName">User</strong>!</p>
+          <p>Welcome, <strong id="userName">User</strong>! | <span id="planBadge" style="background: #667eea; padding: 5px 10px; border-radius: 5px; font-size: 0.9em;">Free Plan</span></p>
+          <p style="font-size: 0.85em; margin-top: 3px;">Bookings: <strong id="bookingCount">0/10</strong></p>
           <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
       </header>
@@ -117,7 +146,18 @@
         <input type="date" id="date" required>
         <input type="time" id="time" required>
         <input type="text" id="address" placeholder="Address" required>
+        <p id="priceDisplay" style="color: #764ba2; font-weight: bold; margin: 10px 0;">Price: calculating...</p>
         <button onclick="createBooking()" style="width: 100%;">Book Now</button>
+      </div>
+
+      <div class="card">
+        <h2>💰 Earnings Dashboard</h2>
+        <p>Total Commission Earned: <span style="font-size: 1.5em; color: #28a745; font-weight: bold;" id="totalEarnings">$0</span></p>
+        <p>Total Bookings: <strong id="totalBookings">0</strong></p>
+        <hr style="margin: 15px 0;">
+        <h3>Subscription Plans</h3>
+        <p id="currentPlan" style="color: #667eea; margin-bottom: 10px;"><strong>Current Plan: Free</strong></p>
+        <button onclick="showUpgradeModal()" style="width: 100%; background: #28a745;">Upgrade to Premium</button>
       </div>
 
       <h2 style="color: white; margin-bottom: 20px;">📋 Available Services</h2>
@@ -147,6 +187,8 @@
       document.getElementById('userName').textContent = userName || 'User';
       loadCities();
       loadServices();
+      loadSubscription();
+      loadEarnings();
       loadBookings();
       setInterval(loadBookings, 5000);
     }
@@ -362,6 +404,60 @@
       }
     }
 
+    async function loadSubscription() {
+      try {
+        const res = await fetch(`${API}/subscription`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const sub = await res.json();
+        document.getElementById('planBadge').textContent = sub.plan.toUpperCase() + ' Plan';
+        document.getElementById('planBadge').style.background = sub.plan === 'premium' ? '#667eea' : sub.plan === 'pro' ? '#764ba2' : '#999';
+        document.getElementById('bookingCount').textContent = `${sub.monthly_bookings}/${sub.booking_limit}`;
+        document.getElementById('currentPlan').innerHTML = `<strong>Current Plan: ${sub.plan.toUpperCase()} (${sub.monthly_bookings}/${sub.booking_limit} bookings)</strong>`;
+      } catch (err) {
+        console.error('Error loading subscription:', err);
+      }
+    }
+
+    async function loadEarnings() {
+      try {
+        const res = await fetch(`${API}/earnings`);
+        const earnings = await res.json();
+        document.getElementById('totalEarnings').textContent = `$${parseFloat(earnings.total_commission).toFixed(2)}`;
+        document.getElementById('totalBookings').textContent = earnings.total_bookings;
+      } catch (err) {
+        console.error('Error loading earnings:', err);
+      }
+    }
+
+    function showUpgradeModal() {
+      document.getElementById('upgradeModal').classList.remove('hidden');
+    }
+
+    function closeUpgradeModal() {
+      document.getElementById('upgradeModal').classList.add('hidden');
+    }
+
+    async function upgradePlan(plan) {
+      try {
+        const res = await fetch(`${API}/subscription/upgrade`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ plan })
+        });
+        const data = await res.json();
+        alert(data.message);
+        closeUpgradeModal();
+        loadSubscription();
+        loadEarnings();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
     async function loadPublicServices() {
       try {
         const res = await fetch(`${API}/services`);
@@ -376,11 +472,14 @@
             currentCategory = s.category;
             html += `<h3 style="color: #333; margin-top: 15px; margin-bottom: 10px;"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span>${s.category.toUpperCase()}</h3>`;
           }
+          const commission = (parseFloat(s.price) * 0.20).toFixed(2);
+          const total = (parseFloat(s.price) + parseFloat(commission)).toFixed(2);
           html += `
             <div class="card">
               <h3>${s.name}</h3>
               <p>${s.description}</p>
-              <p><strong>Duration:</strong> ${s.duration_minutes} min | <strong>Price:</strong> <span class="price">$${s.price}</span></p>
+              <p><strong>Duration:</strong> ${s.duration_minutes} min</p>
+              <p><strong>Base Price:</strong> $${s.price} + <strong>Commission:</strong> $${commission} = <strong>Total:</strong> <span class="price">$${total}</span></p>
               <p style="color: #28a745; font-weight: bold;">✓ Available in 43 cities</p>
             </div>
           `;
@@ -476,13 +575,17 @@
         });
         
         if (res.ok) {
-          alert('Booking created successfully!');
+          const data = await res.json();
+          alert(`Booking created!\nBase Price: $${parseFloat(data.totalPaid - data.commission).toFixed(2)}\nCommission: $${parseFloat(data.commission).toFixed(2)}\nTotal: $${parseFloat(data.totalPaid).toFixed(2)}`);
           document.getElementById('date').value = '';
           document.getElementById('time').value = '';
           document.getElementById('address').value = '';
           document.getElementById('city').value = '';
           document.getElementById('service').value = '';
+          document.getElementById('priceDisplay').textContent = 'Price: calculating...';
           loadBookings();
+          loadSubscription();
+          loadEarnings();
         } else {
           const data = await res.json();
           alert('Error: ' + (data.error || 'Booking failed'));
@@ -491,6 +594,22 @@
         alert('Error: ' + err.message);
       }
     }
+
+    // Update price display when service changes
+    document.addEventListener('change', async (e) => {
+      if (e.target.id === 'service' && e.target.value !== 'Select a service') {
+        const serviceId = e.target.value;
+        const res = await fetch(`${API}/services`);
+        const services = await res.json();
+        const service = services.find(s => s.id === serviceId);
+        if (service) {
+          const basePrice = parseFloat(service.price);
+          const commission = basePrice * 0.20;
+          const total = basePrice + commission;
+          document.getElementById('priceDisplay').innerHTML = `Price: $${basePrice.toFixed(2)} + Commission $${commission.toFixed(2)} = <strong style="color: #764ba2;">Total $${total.toFixed(2)}</strong>`;
+        }
+      }
+    });
   </script>
 </body>
 </html>
