@@ -99,11 +99,23 @@
           <div id="locationInfo" style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 0.9em; color: #004085; display: none;">📍 Location: <span id="locationCoords">Not set</span></div>
           <div id="map" style="height: 300px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);"></div>
           
-          <select id="service" required><option>Select a service</option></select>
-          <select id="city" required><option>Select a city</option></select>
-          <input type="date" id="date" required>
-          <input type="time" id="time" required>
-          <input type="text" id="address" placeholder="Address" required>
+          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">📦 Select Service</label>
+          <select id="service" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;"><option>Select a service</option></select>
+          
+          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">🌍 Select Country</label>
+          <select id="country" required onchange="loadCitiesByCountry()" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;"><option value="">Select a country</option></select>
+          
+          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">🏙️ Select City</label>
+          <select id="city" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;"><option>Select a city</option></select>
+          
+          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">📅 Date</label>
+          <input type="date" id="date" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
+          
+          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">🕐 Time</label>
+          <input type="time" id="time" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
+          
+          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">📍 Address</label>
+          <input type="text" id="address" placeholder="Enter your address" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
           <div id="distanceInfo" style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 0.9em; color: #004085; display: none;">📏 Distance to city: <span id="distance">--</span> km</div>
           <button onclick="createBooking()" style="width: 100%;">Book Now</button>
         </div>
@@ -408,7 +420,53 @@
       switchTab('login');
     }
 
+    let allCities = [];
+
     async function loadCities() {
+      try {
+        const res = await fetch(`${API}/cities`);
+        allCities = await res.json();
+        
+        // Populate country dropdown
+        const countrySelect = document.getElementById('country');
+        const countries = [...new Set(allCities.map(c => c.country))].sort();
+        
+        let countryOptions = '<option value="">Select a country</option>';
+        countries.forEach(country => {
+          countryOptions += `<option value="${country}">${country}</option>`;
+        });
+        countrySelect.innerHTML = countryOptions;
+        
+        // Load all cities initially
+        loadCitiesByCountry();
+      } catch (err) {
+        console.error('Error loading cities:', err);
+      }
+    }
+
+    function loadCitiesByCountry() {
+      const selectedCountry = document.getElementById('country').value;
+      const citySelect = document.getElementById('city');
+      
+      let selectOptions = '<option>Select a city</option>';
+      
+      if (selectedCountry) {
+        // Filter cities by selected country
+        const filteredCities = allCities.filter(c => c.country === selectedCountry).sort((a, b) => a.name.localeCompare(b.name));
+        filteredCities.forEach(c => {
+          selectOptions += `<option value="${c.name}">${c.name}</option>`;
+        });
+      } else {
+        // Show all cities if no country selected
+        allCities.sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+          selectOptions += `<option value="${c.name}">${c.name}, ${c.country}</option>`;
+        });
+      }
+      
+      citySelect.innerHTML = selectOptions;
+    }
+
+    async function loadCitiesOld() {
       try {
         const res = await fetch(`${API}/cities`);
         const cities = await res.json();
