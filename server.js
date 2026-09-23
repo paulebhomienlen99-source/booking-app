@@ -188,6 +188,7 @@ async function initDB() {
       ['Frascati', 'Italy', 'Lazio'],
       ['Albano Laziale', 'Italy', 'Lazio'],
       ['Genzano di Roma', 'Italy', 'Lazio'],
+      ['Mantova', 'Italy', 'Lombardy'],
       ['Paris', 'France', 'Île-de-France'],
       ['Lyon', 'France', 'Rhône-Alpes'],
       ['Marseille', 'France', 'Provence'],
