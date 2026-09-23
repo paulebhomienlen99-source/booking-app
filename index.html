@@ -93,31 +93,58 @@
       </header>
 
       <div id="bookingSection">
-        <div class="card">
-          <h2>📍 Make a Booking</h2>
-          <button onclick="getLocation()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; width: 100%; margin-bottom: 10px;">📍 Enable GPS Location</button>
-          <div id="locationInfo" style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 0.9em; color: #004085; display: none;">📍 Location: <span id="locationCoords">Not set</span></div>
-          <div id="map" style="height: 300px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);"></div>
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);">
+          <h2 style="color: white; margin-bottom: 25px; font-size: 28px; text-align: center;">✨ Create Your Booking</h2>
           
-          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">📦 Select Service</label>
-          <select id="service" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;"><option>Select a service</option></select>
+          <!-- GPS Button -->
+          <button onclick="getLocation()" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; width: 100%; margin-bottom: 20px; font-weight: bold; transition: all 0.3s; hover-background: rgba(255,255,255,0.3);">📍 Enable GPS Location</button>
           
-          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">🌍 Select Country</label>
-          <select id="country" required onchange="loadCitiesByCountry()" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;"><option value="">Select a country</option></select>
+          <div id="locationInfo" style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95em; color: white; display: none; border-left: 4px solid #4ade80;">📍 Your Location: <span id="locationCoords" style="font-weight: bold;">Not set</span></div>
           
-          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">🏙️ Select City</label>
-          <select id="city" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;"><option>Select a city</option></select>
+          <!-- Map -->
+          <div id="map" style="height: 300px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); border: 3px solid rgba(255,255,255,0.2);"></div>
           
-          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">📅 Date</label>
-          <input type="date" id="date" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
+          <!-- Service Selection -->
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">📦 Select Service</label>
+            <select id="service" required style="width: 100%; padding: 12px; margin-bottom: 0; border: none; border-radius: 8px; font-size: 1em; background: white; color: #333;"><option>Select a service</option></select>
+          </div>
           
-          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">🕐 Time</label>
-          <input type="time" id="time" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
+          <!-- Country & City Selection -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+              <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">🌍 Country</label>
+              <select id="country" required onchange="loadCitiesByCountry()" style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em; background: white; color: #333;"><option value="">Select country</option></select>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+              <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">🏙️ City</label>
+              <select id="city" required style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em; background: white; color: #333;"><option>Select city</option></select>
+            </div>
+          </div>
           
-          <label style="display: block; color: #333; font-weight: bold; margin-bottom: 5px;">📍 Address</label>
-          <input type="text" id="address" placeholder="Enter your address" required style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px;">
-          <div id="distanceInfo" style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 0.9em; color: #004085; display: none;">📏 Distance to city: <span id="distance">--</span> km</div>
-          <button onclick="createBooking()" style="width: 100%;">Book Now</button>
+          <!-- Date & Time Selection -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+              <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">📅 Date</label>
+              <input type="date" id="date" required style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em;">
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+              <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">🕐 Time</label>
+              <input type="time" id="time" required style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em;">
+            </div>
+          </div>
+          
+          <!-- Address -->
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">📍 Address</label>
+            <input type="text" id="address" placeholder="Enter your address" required style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em;">
+          </div>
+          
+          <!-- Distance Info -->
+          <div id="distanceInfo" style="background: rgba(74, 222, 128, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95em; color: #4ade80; display: none; border-left: 4px solid #4ade80; font-weight: bold;">📏 Distance to city: <span id="distance">--</span> km</div>
+          
+          <!-- Book Now Button -->
+          <button onclick="createBooking()" style="width: 100%; padding: 14px; background: white; color: #667eea; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: all 0.3s; box-shadow: 0 5px 20px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 5px 20px rgba(0,0,0,0.2)';">🎉 Book Now</button>
         </div>
 
         <h2 style="color: white; margin-bottom: 20px;">📋 Available Services</h2>
