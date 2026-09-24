@@ -552,6 +552,28 @@ app.get('/earnings', async (req, res) => {
   }
 });
 
+app.get('/orders', verifyToken, async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT b.id, b.booking_date, b.booking_time, b.city, b.status, b.created_at,
+        s.name as service_name, s.price,
+        u.username
+      FROM bookings b
+      JOIN services s ON b.service_id = s.id
+      JOIN users u ON b.user_id = u.id
+      ORDER BY b.created_at DESC
+      LIMIT 100
+    `);
+    const orders = result.rows.map(row => ({
+      ...row,
+      commission: parseFloat(row.price) * 0.20
+    }));
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/bookings', verifyToken, async (req, res) => {
   const { service_id, booking_date, booking_time, address, city } = req.body;
   const id = uuidv4();

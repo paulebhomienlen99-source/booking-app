@@ -248,6 +248,32 @@
           <div id="cancelledBookingsList" style="max-height: 400px; overflow-y: auto;"></div>
         </div>
 
+        <!-- Orders/Bookings Table -->
+        <div class="card" style="border-top: 4px solid #667eea;">
+          <h3 style="color: #667eea; margin-bottom: 20px; display: flex; align-items: center; font-size: 1.3em;">
+            <span style="font-size: 1.5em; margin-right: 10px;">📦</span> Recent Orders
+          </h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.95em;">
+              <thead>
+                <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #333;">Service</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #333;">City</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #333;">Date</th>
+                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #333;">Amount</th>
+                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #28a745;">Commission (20%)</th>
+                  <th style="padding: 12px; text-align: center; font-weight: bold; color: #333;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr style="text-align: center; color: #999; padding: 20px;">
+                  <td colspan="6" style="padding: 20px;">Loading orders...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Upgrade Section -->
         <div class="card" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-align: center; padding: 30px;">
           <h3 style="color: white; margin-bottom: 10px;">🚀 Upgrade Your Plan</h3>
@@ -322,7 +348,10 @@
       
       document.getElementById('bookingSection').classList.toggle('hidden', page !== 'bookings');
       document.getElementById('dashboardSection').classList.toggle('hidden', page !== 'dashboard');
-      if (page === 'dashboard') loadEarnings();
+      if (page === 'dashboard') {
+        loadEarnings();
+        loadOrders();
+      }
     }
 
     function showUpgradeModal() {
@@ -614,6 +643,54 @@
         }
       } catch (err) {
         console.error('Error loading earnings:', err);
+      }
+    }
+
+    async function loadOrders() {
+      try {
+        if (!localStorage.getItem('token')) {
+          return;
+        }
+        
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API}/bookings`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const bookings = await res.json();
+        
+        let ordersHtml = '';
+        
+        if (bookings.length === 0) {
+          ordersHtml = '<p style="color: #999; text-align: center; padding: 20px;">No orders yet</p>';
+        } else {
+          bookings.forEach(b => {
+            const commission = (parseFloat(b.price || 0) * 0.20).toFixed(2);
+            const statusColor = b.status === 'pending' ? '#ffc107' : b.status === 'confirmed' ? '#28a745' : '#dc3545';
+            const statusEmoji = b.status === 'pending' ? '⏳' : b.status === 'confirmed' ? '✅' : '❌';
+            
+            ordersHtml += `
+              <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid ${statusColor}; display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex: 1;">
+                  <p style="color: #333; font-weight: bold; margin: 0 0 5px 0;">📦 ${b.service_name || 'Service'}</p>
+                  <p style="color: #666; font-size: 0.9em; margin: 0 0 5px 0;">📍 ${b.city} - ${b.booking_date} at ${b.booking_time}</p>
+                  <p style="color: #999; font-size: 0.85em; margin: 0;">Order ID: ${b.id.substring(0, 8)}...</p>
+                </div>
+                <div style="text-align: right;">
+                  <p style="color: #333; font-weight: bold; margin: 0 0 5px 0;">$${b.price || '0.00'}</p>
+                  <p style="color: #28a745; font-weight: bold; margin: 0 0 5px 0;">Commission: $${commission}</p>
+                  <p style="color: ${statusColor}; font-weight: bold; margin: 0;">${statusEmoji} ${b.status.toUpperCase()}</p>
+                </div>
+              </div>
+            `;
+          });
+        }
+        
+        const ordersDiv = document.getElementById('ordersList');
+        if (ordersDiv) {
+          ordersDiv.innerHTML = ordersHtml;
+        }
+      } catch (err) {
+        console.error('Error loading orders:', err);
       }
     }
 
