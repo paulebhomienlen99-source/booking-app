@@ -87,7 +87,7 @@
         <div class="user-info">
           <p>Welcome, <strong id="userName">User</strong>!</p>
           <button onclick="switchPage('bookings')" style="background: #667eea; margin-right: 10px;">📋 My Bookings</button>
-          <button onclick="switchPage('dashboard')" style="background: #28a745; margin-right: 10px;">📊 Dashboard</button>
+          <button id="dashboardBtn" onclick="switchPage('dashboard')" style="background: #28a745; margin-right: 10px; display: none;">📊 Dashboard</button>
           <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
       </header>
@@ -312,6 +312,14 @@
     }
 
     function switchPage(page) {
+      // Protect dashboard - only show to authenticated users
+      if (page === 'dashboard') {
+        if (!localStorage.getItem('token')) {
+          alert('❌ Please log in first to view your dashboard and earnings!');
+          return;
+        }
+      }
+      
       document.getElementById('bookingSection').classList.toggle('hidden', page !== 'bookings');
       document.getElementById('dashboardSection').classList.toggle('hidden', page !== 'dashboard');
       if (page === 'dashboard') loadEarnings();
@@ -549,7 +557,14 @@
 
     async function loadEarnings() {
       try {
-        const res = await fetch(`${API}/earnings`);
+        // Only allow authenticated users to see earnings
+        if (!token) {
+          alert('❌ You must be logged in to view earnings!');
+          return;
+        }
+        const res = await fetch(`${API}/earnings`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         const earnings = await res.json();
         const subRes = await fetch(`${API}/subscription`, {
           headers: { 'Authorization': `Bearer ${token}` }
