@@ -24,7 +24,8 @@
     "leaflet": "^1.9.4",
     "nodemailer": "^10.0.10",
     "pg": "8.10.0",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "@paypal/checkout-server-sdk": "^1.0.1"
   },
   "devDependencies": {
     "nodemon": "3.0.1"

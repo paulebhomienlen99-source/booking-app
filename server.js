@@ -4,6 +4,7 @@ const { Client } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const paypal = require('@paypal/checkout-server-sdk');
 require('dotenv').config();
 
 const app = express();
@@ -11,6 +12,18 @@ app.use(cors());
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
+
+// PayPal Configuration
+let paypalClient;
+if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
+  const clientId = process.env.PAYPAL_CLIENT_ID;
+  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+  
+  const environment = new paypal.core.SandboxEnvironment(clientId, clientSecret);
+  paypalClient = new paypal.core.PayPalHttpClient(environment);
+  console.log('✓ PayPal client initialized');
+}
+
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -710,6 +723,85 @@ app.delete('/bookings/:id', verifyToken, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// PayPal Payment Endpoints
+app.post('/payments/paypal/create-order', verifyToken, async (req, res) => {
+  const { booking_id, amount } = req.body;
+  
+  try {
+    // Call PayPal API to create order
+    const response = await fetch('https://api.sandbox.paypal.com/v2/checkout/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64')}`
+      },
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        purchase_units: [
+          {
+            amount: {
+              currency_code: 'USD',
+              value: amount.toString()
+            },
+            description: `Booking ID: ${booking_id}`
+          }
+        ],
+        application_context: {
+          return_url: `${process.env.FRONTEND_URL || 'https://booking-app-paulebhomienlen-646825d168bf.herokuapp.com'}/payment-success`,
+          cancel_url: `${process.env.FRONTEND_URL || 'https://booking-app-paulebhomienlen-646825d168bf.herokuapp.com'}/payment-cancel`
+        }
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.id) {
+      res.json({ id: data.id, links: data.links });
+    } else {
+      res.status(400).json({ error: 'Failed to create PayPal order', details: data });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
+  const { order_id, booking_id } = req.body;
+  
+  try {
+    // Call PayPal API to capture order
+    const response = await fetch(`https://api.sandbox.paypal.com/v2/checkout/orders/${order_id}/capture`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64')}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.status === 'COMPLETED') {
+      // Update payment status in database
+      await client.query(
+        'UPDATE payments SET payment_status = $1 WHERE booking_id = $2',
+        ['completed', booking_id]
+      );
+      
+      res.json({ status: 'COMPLETED', message: 'Payment captured successfully' });
+    } else {
+      res.status(400).json({ error: 'Payment capture failed', status: data.status });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/payments/paypal/config', (req, res) => {
+  res.json({
+    clientId: process.env.PAYPAL_CLIENT_ID || 'test_client_id'
+  });
 });
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
