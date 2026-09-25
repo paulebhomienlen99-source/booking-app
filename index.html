@@ -386,7 +386,7 @@
           const data = await res.json();
           lastBookingData = data;
           document.getElementById('paypalContainer').style.display = 'block';
-          renderPayPalButton(data.id, data.price);
+          renderPayPalButton(data.id, data.totalPaid || data.price);
           alert('Booking created! Now select payment method');
         } else {
           const data = await res.json();
@@ -404,34 +404,49 @@
         document.getElementById('paypal-button-container').innerHTML = '';
         paypal.Buttons({
           createOrder: async (data, actions) => {
-            const res = await fetch(`${API}/payments/paypal/create-order`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ booking_id: bookingId, amount: parseFloat(amount) })
-            });
-            const orderData = await res.json();
-            return orderData.id;
+            try {
+              const res = await fetch(`${API}/payments/paypal/create-order`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ booking_id: bookingId, amount: parseFloat(amount) })
+              });
+              const orderData = await res.json();
+              console.log('Order created:', orderData);
+              if (!orderData.id) {
+                throw new Error('No order ID returned: ' + JSON.stringify(orderData));
+              }
+              return orderData.id;
+            } catch (err) {
+              console.error('Create order error:', err);
+              throw err;
+            }
           },
           onApprove: async (data, actions) => {
-            const res = await fetch(`${API}/payments/paypal/capture-order`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ order_id: data.orderID, booking_id: bookingId })
-            });
-            const result = await res.json();
-            if (result.status === 'COMPLETED') {
-              alert('Payment successful!');
-              document.getElementById('paypalContainer').style.display = 'none';
-              document.getElementById('date').value = '';
-              document.getElementById('time').value = '';
-              document.getElementById('address').value = '';
-              document.getElementById('city').value = '';
-              document.getElementById('service').value = '';
-              loadBookings();
+            try {
+              const res = await fetch(`${API}/payments/paypal/capture-order`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: data.orderID, booking_id: bookingId })
+              });
+              const result = await res.json();
+              if (result.status === 'COMPLETED') {
+                alert('Payment successful!');
+                document.getElementById('paypalContainer').style.display = 'none';
+                document.getElementById('date').value = '';
+                document.getElementById('time').value = '';
+                document.getElementById('address').value = '';
+                document.getElementById('city').value = '';
+                document.getElementById('service').value = '';
+                loadBookings();
+              }
+            } catch (err) {
+              console.error('Capture order error:', err);
+              alert('Capture error: ' + err.message);
             }
           },
           onError: (err) => {
-            alert('Payment error: ' + err);
+            console.error('PayPal error:', err);
+            alert('Payment error: ' + err.message);
           }
         }).render('#paypal-button-container');
       }
