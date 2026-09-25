@@ -6,6 +6,7 @@
   <title>BookHub - Service Booking Marketplace</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=AQCm0jzZvrpyTnNvUe2wEKg4XtZ9T9bJGR4s2FV6InBt4nTYlQFQ1PkF0_-HAmslYpAMlqRFoeG5Igb7&currency=USD"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
@@ -112,6 +113,11 @@
         <div id="distanceInfo" style="background: rgba(74, 222, 128, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; border-left: 4px solid #4ade80; font-weight: bold; color: #4ade80;">📏 Distance to city: <span id="distance">--</span> km</div>
         
         <button onclick="createBooking()" style="width: 100%; padding: 14px; background: white; color: #667eea; font-weight: bold; font-size: 1.1em;">🎉 Book Now</button>
+        
+        <div id="paypalContainer" style="margin-top: 20px; display: none;">
+          <h3 style="color: white; margin-bottom: 15px; text-align: center;">Or Pay with PayPal</h3>
+          <div id="paypal-button-container"></div>
+        </div>
       </div>
     </div>
 
@@ -378,19 +384,56 @@
         
         if (res.ok) {
           const data = await res.json();
-          alert('Booking created! Commission: $' + parseFloat(data.commission).toFixed(2));
-          document.getElementById('date').value = '';
-          document.getElementById('time').value = '';
-          document.getElementById('address').value = '';
-          document.getElementById('city').value = '';
-          document.getElementById('service').value = '';
-          loadBookings();
+          lastBookingData = data;
+          document.getElementById('paypalContainer').style.display = 'block';
+          renderPayPalButton(data.id, data.price);
+          alert('Booking created! Now select payment method');
         } else {
           const data = await res.json();
           alert('Error: ' + (data.error || 'Booking failed'));
         }
       } catch (err) {
         alert('Error: ' + err.message);
+      }
+    }
+
+    let lastBookingData = null;
+
+    function renderPayPalButton(bookingId, amount) {
+      if (window.paypal) {
+        document.getElementById('paypal-button-container').innerHTML = '';
+        paypal.Buttons({
+          createOrder: async (data, actions) => {
+            const res = await fetch(`${API}/payments/paypal/create-order`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ booking_id: bookingId, amount: parseFloat(amount) })
+            });
+            const orderData = await res.json();
+            return orderData.id;
+          },
+          onApprove: async (data, actions) => {
+            const res = await fetch(`${API}/payments/paypal/capture-order`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ order_id: data.orderID, booking_id: bookingId })
+            });
+            const result = await res.json();
+            if (result.status === 'COMPLETED') {
+              alert('Payment successful!');
+              document.getElementById('paypalContainer').style.display = 'none';
+              document.getElementById('date').value = '';
+              document.getElementById('time').value = '';
+              document.getElementById('address').value = '';
+              document.getElementById('city').value = '';
+              document.getElementById('service').value = '';
+              loadBookings();
+            }
+          },
+          onError: (err) => {
+            alert('Payment error: ' + err);
+          }
+        }).render('#paypal-button-container');
       }
     }
 
