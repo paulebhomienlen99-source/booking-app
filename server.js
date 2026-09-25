@@ -729,13 +729,18 @@ app.delete('/bookings/:id', verifyToken, async (req, res) => {
 app.post('/payments/paypal/create-order', verifyToken, async (req, res) => {
   const { booking_id, amount } = req.body;
   
+  if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'PayPal credentials not configured' });
+  }
+  
   try {
-    // Call PayPal API to create order
+    const auth = Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64');
+    
     const response = await fetch('https://api.sandbox.paypal.com/v2/checkout/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64')}`
+        'Authorization': `Basic ${auth}`
       },
       body: JSON.stringify({
         intent: 'CAPTURE',
@@ -743,26 +748,26 @@ app.post('/payments/paypal/create-order', verifyToken, async (req, res) => {
           {
             amount: {
               currency_code: 'USD',
-              value: amount.toString()
+              value: amount.toFixed(2)
             },
             description: `Booking ID: ${booking_id}`
           }
-        ],
-        application_context: {
-          return_url: `${process.env.FRONTEND_URL || 'https://booking-app-paulebhomienlen-646825d168bf.herokuapp.com'}/payment-success`,
-          cancel_url: `${process.env.FRONTEND_URL || 'https://booking-app-paulebhomienlen-646825d168bf.herokuapp.com'}/payment-cancel`
-        }
+        ]
       })
     });
     
     const data = await response.json();
     
-    if (data.id) {
-      res.json({ id: data.id, links: data.links });
+    console.log('PayPal Order Created:', { status: response.status, orderId: data.id, error: data.message });
+    
+    if (response.ok && data.id) {
+      res.json({ id: data.id });
     } else {
+      console.error('PayPal Error:', data);
       res.status(400).json({ error: 'Failed to create PayPal order', details: data });
     }
   } catch (err) {
+    console.error('PayPal Create Order Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -770,19 +775,26 @@ app.post('/payments/paypal/create-order', verifyToken, async (req, res) => {
 app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
   const { order_id, booking_id } = req.body;
   
+  if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'PayPal credentials not configured' });
+  }
+  
   try {
-    // Call PayPal API to capture order
+    const auth = Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64');
+    
     const response = await fetch(`https://api.sandbox.paypal.com/v2/checkout/orders/${order_id}/capture`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64')}`
+        'Authorization': `Basic ${auth}`
       }
     });
     
     const data = await response.json();
     
-    if (data.status === 'COMPLETED') {
+    console.log('PayPal Order Captured:', { status: response.status, orderId: order_id });
+    
+    if (response.ok && data.status === 'COMPLETED') {
       // Update payment status in database
       await client.query(
         'UPDATE payments SET payment_status = $1 WHERE booking_id = $2',
@@ -791,9 +803,11 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
       
       res.json({ status: 'COMPLETED', message: 'Payment captured successfully' });
     } else {
+      console.error('PayPal Capture Error:', data);
       res.status(400).json({ error: 'Payment capture failed', status: data.status });
     }
   } catch (err) {
+    console.error('PayPal Capture Order Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
