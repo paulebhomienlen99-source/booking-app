@@ -423,7 +423,7 @@
         token = data.token;
         userName = name;
         localStorage.setItem('token', token);
-        localStorage.setItem('userName', userName);
+        localStorage.setItem('userName', userName); localStorage.setItem('userEmail', email);
         showApp();
       } catch (err) {
         errorDiv.textContent = 'Error: ' + err.message;
@@ -432,7 +432,7 @@
     }
 
     async function login() {
-      const email = document.getElementById('loginEmail').value;
+      const email = document.getElementById('loginEmail').value; localStorage.setItem('userEmail', email);
       const password = document.getElementById('loginPassword').value;
       const errorDiv = document.getElementById('authError');
 
@@ -453,7 +453,7 @@
         token = data.token;
         userName = data.name;
         localStorage.setItem('token', token);
-        localStorage.setItem('userName', userName);
+        localStorage.setItem('userName', userName); localStorage.setItem('userEmail', email);
         showApp();
       } catch (err) {
         errorDiv.textContent = 'Error: ' + err.message;
@@ -873,4 +873,6 @@
   </script>
 </body>
 </html>
+
+
 
