@@ -272,7 +272,7 @@
   <script>
     const API = window.location.origin;
     let token = localStorage.getItem('token');
-    let userName = localStorage.getItem('userName');
+    let userName = localStorage.getItem('userName'); let userEmail = localStorage.getItem('userEmail');
     const categoryEmojis = { salon: '💅', restaurant: '🍽️', taxi: '🚕', hotel: '🏨', supermarket: '🛒', home: '🏠', childcare: '👶', petcare: '🐕', gym: '💪', accommodation: '🏡', marketplace: '💼', carrent: '🚗' };
 
     if (token) showApp(); else showAuth();
@@ -873,6 +873,8 @@
   </script>
 </body>
 </html>
+
+
 
 
 
