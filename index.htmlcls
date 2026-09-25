@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookHub - Service Booking Marketplace</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { text-align: center; color: white; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center; }
+    h1 { font-size: 2.5em; }
+    .user-info { color: white; text-align: right; }
+    .user-info p { margin: 5px 0; }
+    .hidden { display: none !important; }
+    .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 20px; }
+    .card h3 { color: #667eea; margin-bottom: 10px; }
+    .card p { color: #666; margin-bottom: 8px; }
+    .price { font-size: 1.5em; color: #764ba2; font-weight: bold; }
+    button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 1em; margin-right: 5px; }
+    button:hover { background: #764ba2; }
+    .cancel-btn { background: #dc3545; }
+    .cancel-btn:hover { background: #c82333; }
+    .logout-btn { background: #dc3545; float: right; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px; font-size: 1em; }
+    .auth-form { background: white; padding: 40px; border-radius: 10px; max-width: 400px; margin: 50px auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+    .success { color: #155724; background: #d4edda; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+    .services, .bookings { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .category-title { color: white; font-size: 1.5em; margin-top: 30px; margin-bottom: 15px; text-transform: capitalize; }
+    .category-emoji { margin-right: 10px; }
+    .status-cancelled { color: #dc3545; font-weight: bold; }
+    .status-pending { color: #ffc107; font-weight: bold; }
+    .status-confirmed { color: #28a745; font-weight: bold; }
+    .link { color: #667eea; cursor: pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="authSection">
+      <div class="auth-form">
+        <h2>📅 BookHub</h2>
+        <div id="authError" class="error hidden"></div>
+        <div id="authSuccess" class="success hidden"></div>
+        
+        <div id="loginForm">
+          <h3>Login</h3>
+          <input type="email" id="loginEmail" placeholder="Email" required>
+          <input type="password" id="loginPassword" placeholder="Password" required>
+          <button onclick="login()" style="width: 100%;">Login</button>
+          <p style="text-align: center; margin-top: 10px;">
+            Don't have an account? <a href="#" onclick="switchTab('signup'); return false;" class="link">Sign Up</a>
+          </p>
+          <p style="text-align: center; margin-top: 10px;">
+            <a href="#" onclick="switchTab('browse'); return false;" class="link">👀 Browse All Services</a>
+          </p>
+        </div>
+
+        <div id="signupForm" class="hidden">
+          <h3>Sign Up</h3>
+          <input type="text" id="signupName" placeholder="Full Name" required>
+          <input type="email" id="signupEmail" placeholder="Email" required>
+          <input type="password" id="signupPassword" placeholder="Password" required>
+          <button onclick="signup()" style="width: 100%;">Sign Up</button>
+          <p style="text-align: center; margin-top: 10px;">
+            Already have an account? <a href="#" onclick="switchTab('login'); return false;" class="link">Login</a>
+          </p>
+        </div>
+
+        <div id="browseForm" class="hidden" style="max-height: 600px; overflow-y: auto;">
+          <h3>👀 Browse All Services</h3>
+          <p style="color: #666; margin-bottom: 15px;">Explore our 44 services across 10 categories available in 43 cities worldwide!</p>
+          <div id="publicServicesList" style="margin-bottom: 20px;"></div>
+          <p style="text-align: center; margin-top: 15px;">
+            <a href="#" onclick="switchTab('signup'); return false;" class="link">Sign Up to Book</a> | 
+            <a href="#" onclick="switchTab('login'); return false;" class="link">Login</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div id="appSection" class="hidden">
+      <header>
+        <h1>📅 Booking App</h1>
+        <div class="user-info">
+          <p>Welcome, <strong id="userName">User</strong>!</p>
+          <button onclick="switchPage('bookings')" style="background: #667eea; margin-right: 10px;">📋 My Bookings</button>
+          <button id="dashboardBtn" onclick="switchPage('dashboard')" style="background: #28a745; margin-right: 10px; display: none;">📊 Dashboard</button>
+          <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+      </header>
+
+      <div id="bookingSection">
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);">
+          <h2 style="color: white; margin-bottom: 25px; font-size: 28px; text-align: center;">✨ Create Your Booking</h2>
+          
+          <!-- GPS Button -->
+          <button onclick="getLocation()" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; width: 100%; margin-bottom: 20px; font-weight: bold; transition: all 0.3s; hover-background: rgba(255,255,255,0.3);">📍 Enable GPS Location</button>
+          
+          <div id="locationInfo" style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95em; color: white; display: none; border-left: 4px solid #4ade80;">📍 Your Location: <span id="locationCoords" style="font-weight: bold;">Not set</span></div>
+          
+          <!-- Map -->
+          <div id="map" style="height: 300px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); border: 3px solid rgba(255,255,255,0.2);"></div>
+          
+          <!-- Service Selection -->
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">📦 Select Service</label>
+            <select id="service" required style="width: 100%; padding: 12px; margin-bottom: 0; border: none; border-radius: 8px; font-size: 1em; background: white; color: #333;"><option>Select a service</option></select>
+          </div>
+          
+          <!-- Country & City Selection -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+              <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">🌍 Country</label>
+              <select id="country" required onchange="loadCitiesByCountry()" style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em; background: white; color: #333;"><option value="">Select country</option></select>
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+              <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">🏙️ City</label>
+              <select id="city" required style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em; background: white; color: #333;"><option>Select city</option></select>
+            </div>
+          </div>
+          
+          <!-- Date & Time Selection -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+              <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">📅 Date</label>
+              <input type="date" id="date" required style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em;">
+            </div>
+            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+              <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">🕐 Time</label>
+              <input type="time" id="time" required style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em;">
+            </div>
+          </div>
+          
+          <!-- Address -->
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <label style="display: block; color: white; font-weight: bold; margin-bottom: 8px; font-size: 1.05em;">📍 Address</label>
+            <input type="text" id="address" placeholder="Enter your address" required style="width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1em;">
+          </div>
+          
+          <!-- Distance Info -->
+          <div id="distanceInfo" style="background: rgba(74, 222, 128, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95em; color: #4ade80; display: none; border-left: 4px solid #4ade80; font-weight: bold;">📏 Distance to city: <span id="distance">--</span> km</div>
+          
+          <!-- Book Now Button -->
+          <button onclick="createBooking()" style="width: 100%; padding: 14px; background: white; color: #667eea; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: all 0.3s; box-shadow: 0 5px 20px rgba(0,0,0,0.2);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 5px 20px rgba(0,0,0,0.2)';">🎉 Book Now</button>
+        </div>
+
+        <h2 style="color: white; margin-bottom: 20px;">📋 Available Services</h2>
+        <div id="services"></div>
+
+        <h2 style="color: white; margin-bottom: 20px;">✅ Your Bookings</h2>
+        <div class="bookings" id="bookings"></div>
+      </div>
+
+      <div id="dashboardSection" class="hidden">
+        <h2 style="color: white; margin-bottom: 25px;">📊 Your Dashboard</h2>
+        
+        <!-- Key Metrics Row -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
+          <div class="card" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; text-align: center; padding: 25px;">
+            <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">📈 TOTAL BOOKINGS</p>
+            <h2 id="totalBookings" style="color: white; font-size: 2.5em; margin: 0; font-weight: bold;">0</h2>
+            <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">All-time bookings</p>
+          </div>
+          
+          <div class="card" style="background: linear-gradient(135deg, #ffc107, #ff9800); color: white; text-align: center; padding: 25px;">
+            <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">📋 YOUR PLAN</p>
+            <h2 id="activePlan" style="color: white; font-size: 1.8em; margin: 0; font-weight: bold;">FREE</h2>
+            <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;" id="planDetails">10/10 bookings</p>
+          </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 25px;">
+          <!-- Revenue Breakdown --><div id="revenueSection">
+          <div class="card">
+            <h3 style="color: #667eea; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">💹 Revenue Breakdown</h3>
+            <div style="padding: 10px 0;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <span style="color: #666;">Base Revenue:</span>
+                <span style="font-weight: bold; color: #333;" id="baseRevenue">$0</span>
+              </div>
+              <div style="background: #f0f0f0; height: 6px; border-radius: 3px; margin-bottom: 15px;"></div>
+              
+              <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <span style="color: #666;">Your Commission (20%):</span>
+                <span style="font-weight: bold; color: #28a745;" id="commissionRevenue">$0</span>
+              </div>
+              <div style="background: #28a745; height: 6px; border-radius: 3px; margin-bottom: 15px;"></div>
+              
+              <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid #ddd;">
+                <span style="color: #333; font-weight: bold;">Total Revenue:</span>
+                <span style="font-weight: bold; color: #667eea; font-size: 1.2em;" id="totalRevenue">$0</span>
+              </div>
+            </div>
+          </div>
+
+          </div><!-- Booking Status Stats -->
+          <div class="card">
+            <h3 style="color: #667eea; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">📊 Booking Status</h3>
+            <div style="padding: 10px 0;">
+              <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <div style="width: 40px; height: 40px; background: #ffc107; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 10px;" id="pendingBookings">0</div>
+                <div>
+                  <p style="color: #666; margin: 0; font-size: 0.9em;">Pending</p>
+                  <p style="color: #ffc107; margin: 0; font-weight: bold;">Awaiting confirmation</p>
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                <div style="width: 40px; height: 40px; background: #28a745; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 10px;" id="confirmedBookings">0</div>
+                <div>
+                  <p style="color: #666; margin: 0; font-size: 0.9em;">Confirmed</p>
+                  <p style="color: #28a745; margin: 0; font-weight: bold;">Active bookings</p>
+                </div>
+              </div>
+              
+              <div style="display: flex; align-items: center;">
+                <div style="width: 40px; height: 40px; background: #dc3545; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 10px;" id="cancelledBookings">0</div>
+                <div>
+                  <p style="color: #666; margin: 0; font-size: 0.9em;">Cancelled</p>
+                  <p style="color: #dc3545; margin: 0; font-weight: bold;">Cancelled bookings</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cancelled Bookings Section -->
+        <div class="card" style="border-left: 4px solid #dc3545;">
+          <h3 style="color: #dc3545; margin-bottom: 15px; display: flex; align-items: center;">
+            <span style="font-size: 1.5em; margin-right: 10px;">🗑️</span> Cancelled Bookings
+          </h3>
+          <div id="cancelledBookingsList" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+
+        <!-- Orders/Bookings Table -->
+        <div class="card" style="border-top: 4px solid #667eea;">
+          <h3 style="color: #667eea; margin-bottom: 20px; display: flex; align-items: center; font-size: 1.3em;">
+            <span style="font-size: 1.5em; margin-right: 10px;">📦</span> Recent Orders
+          </h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.95em;">
+              <thead>
+                <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #333;">Service</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #333;">City</th>
+                  <th style="padding: 12px; text-align: left; font-weight: bold; color: #333;">Date</th>
+                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #333;">Amount</th>
+                  <th style="padding: 12px; text-align: right; font-weight: bold; color: #28a745;">Commission (20%)</th>
+                  <th style="padding: 12px; text-align: center; font-weight: bold; color: #333;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Upgrade Section -->
+        <div class="card" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-align: center; padding: 30px;">
+          <h3 style="color: white; margin-bottom: 10px;">🚀 Upgrade Your Plan</h3>
+          <p style="margin-bottom: 15px; opacity: 0.9;">Get more bookings and increase your earnings!</p>
+          <button onclick="showUpgradeModal()" style="background: white; color: #667eea; border: none; padding: 12px 30px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 1em;">View Plans</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+    let token = localStorage.getItem('token');
+    let userName = localStorage.getItem('userName');
+    const categoryEmojis = { salon: '💅', restaurant: '🍽️', taxi: '🚕', hotel: '🏨', supermarket: '🛒', home: '🏠', childcare: '👶', petcare: '🐕', gym: '💪', accommodation: '🏡', marketplace: '💼', carrent: '🚗' };
+
+    if (token) showApp(); else showAuth();
+
+    function showAuth() {
+      document.getElementById('authSection').classList.remove('hidden');
+      document.getElementById('appSection').classList.add('hidden');
+    }
+
+    function showApp() {
+      document.getElementById('authSection').classList.add('hidden');
+      document.getElementById('appSection').classList.remove('hidden');
+      document.getElementById('dashboardBtn').style.display = 'inline-block';
+      document.getElementById('userName').textContent = userName || 'User';
+      loadCities();
+      loadServices();
+      loadEarnings();
+      loadBookings();
+      setInterval(loadBookings, 5000);
+      autoDetectLocation();
+    }
+
+    function autoDetectLocation() {
+      if (!navigator.geolocation) return;
+      
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          userLat = position.coords.latitude;
+          userLng = position.coords.longitude;
+          
+          document.getElementById('locationInfo').style.display = 'block';
+          document.getElementById('locationCoords').textContent = userLat.toFixed(4) + ', ' + userLng.toFixed(4);
+          
+          initMap();
+        },
+        function(error) {
+          console.log('Auto-location failed (this is optional): ' + error.message);
+        }
+      );
+    }
+
+    function switchTab(tab) {
+      document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+      document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+      document.getElementById('browseForm').classList.toggle('hidden', tab !== 'browse');
+      document.getElementById('authError').classList.add('hidden');
+      document.getElementById('authSuccess').classList.add('hidden');
+      if (tab === 'browse') loadPublicServices();
+    }
+
+    function switchPage(page) {
+      // Protect dashboard - only show to authenticated users
+      if (page === 'dashboard') {
+        if (!localStorage.getItem('token')) {
+          alert('❌ Please log in first to view your dashboard and earnings!');
+          return;
+        }
+      }
+      
+      document.getElementById('bookingSection').classList.toggle('hidden', page !== 'bookings');
+      document.getElementById('dashboardSection').classList.toggle('hidden', page !== 'dashboard');
+      if (page === 'dashboard') {
+        loadEarnings();
+        loadOrders();
+      }
+    }
+
+    function showUpgradeModal() {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;';
+      modal.innerHTML = `
+        <div class="card" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+          <span onclick="this.parentElement.parentElement.remove()" style="float: right; cursor: pointer; font-size: 24px; color: #999;">&times;</span>
+          <h2 style="color: #667eea; margin-top: 0;">🚀 Upgrade Your Plan</h2>
+          <p style="color: #666; margin-bottom: 20px;">Get more bookings and earn more commission!</p>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div style="border: 2px solid #ccc; padding: 15px; border-radius: 5px; text-align: center;">
+              <h4 style="color: #667eea; margin-bottom: 10px;">📦 Free Plan</h4>
+              <p style="font-size: 2em; font-weight: bold; color: #28a745; margin: 10px 0;">$0/mo</p>
+              <p style="color: #666; font-size: 0.9em; margin: 10px 0;">10 bookings/month</p>
+              <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: #ccc; width: 100%; margin-top: 10px; cursor: default;">Current</button>
+            </div>
+            
+            <div style="border: 3px solid #667eea; padding: 15px; border-radius: 5px; text-align: center; background: #f0f4ff;">
+              <h4 style="color: #667eea; margin-bottom: 10px;">⭐ Premium</h4>
+              <p style="font-size: 2em; font-weight: bold; color: #667eea; margin: 10px 0;">$9.99/mo</p>
+              <p style="color: #666; font-size: 0.9em; margin: 10px 0;">100 bookings/month</p>
+              <button onclick="upgradePlan('premium'); this.parentElement.parentElement.parentElement.remove();" style="width: 100%; margin-top: 10px;">Upgrade</button>
+            </div>
+          </div>
+          
+          <div style="margin-top: 15px; border: 2px solid #764ba2; padding: 15px; border-radius: 5px; text-align: center;">
+            <h4 style="color: #764ba2; margin-bottom: 10px;">🚀 Pro Plan</h4>
+            <p style="font-size: 2em; font-weight: bold; color: #764ba2; margin: 10px 0;">$19.99/mo</p>
+            <p style="color: #666; font-size: 0.9em; margin: 10px 0;">Unlimited bookings</p>
+            <button onclick="upgradePlan('pro'); this.parentElement.parentElement.remove();" style="background: #764ba2; width: 100%; margin-top: 10px;">Upgrade to Pro</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    async function upgradePlan(plan) {
+      try {
+        const res = await fetch(`${API}/subscription/upgrade`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ plan })
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadEarnings();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function signup() {
+      const name = document.getElementById('signupName').value;
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const errorDiv = document.getElementById('authError');
+
+      if (!name || !email || !password) {
+        errorDiv.textContent = 'Please fill all fields';
+        errorDiv.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          errorDiv.textContent = data.error || 'Signup failed';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+
+        token = data.token;
+        userName = name;
+        localStorage.setItem('token', token);
+        localStorage.setItem('userName', userName);
+        showApp();
+      } catch (err) {
+        errorDiv.textContent = 'Error: ' + err.message;
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errorDiv = document.getElementById('authError');
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          errorDiv.textContent = data.error || 'Login failed';
+          errorDiv.classList.remove('hidden');
+          return;
+        }
+
+        token = data.token;
+        userName = data.name;
+        localStorage.setItem('token', token);
+        localStorage.setItem('userName', userName);
+        showApp();
+      } catch (err) {
+        errorDiv.textContent = 'Error: ' + err.message;
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userName');
+      token = null;
+      userName = null;
+      showAuth();
+      switchTab('login');
+    }
+
+    let allCities = [];
+
+    async function loadCities() {
+      try {
+        const res = await fetch(`${API}/cities`);
+        allCities = await res.json();
+        
+        // Populate country dropdown
+        const countrySelect = document.getElementById('country');
+        const countries = [...new Set(allCities.map(c => c.country))].sort();
+        
+        let countryOptions = '<option value="">Select a country</option>';
+        countries.forEach(country => {
+          countryOptions += `<option value="${country}">${country}</option>`;
+        });
+        countrySelect.innerHTML = countryOptions;
+        
+        // Load all cities initially
+        loadCitiesByCountry();
+      } catch (err) {
+        console.error('Error loading cities:', err);
+      }
+    }
+
+    function loadCitiesByCountry() {
+      const selectedCountry = document.getElementById('country').value;
+      const citySelect = document.getElementById('city');
+      
+      let selectOptions = '<option>Select a city</option>';
+      
+      if (selectedCountry) {
+        // Filter cities by selected country
+        const filteredCities = allCities.filter(c => c.country === selectedCountry).sort((a, b) => a.name.localeCompare(b.name));
+        filteredCities.forEach(c => {
+          selectOptions += `<option value="${c.name}">${c.name}</option>`;
+        });
+      } else {
+        // Show all cities if no country selected
+        allCities.sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+          selectOptions += `<option value="${c.name}">${c.name}, ${c.country}</option>`;
+        });
+      }
+      
+      citySelect.innerHTML = selectOptions;
+    }
+
+    async function loadCitiesOld() {
+      try {
+        const res = await fetch(`${API}/cities`);
+        const cities = await res.json();
+        const citySelect = document.getElementById('city');
+        
+        let selectOptions = '<option>Select a city</option>';
+        
+        cities.forEach(c => {
+          selectOptions += `<option value="${c.name}">${c.name}, ${c.country}</option>`;
+        });
+
+        citySelect.innerHTML = selectOptions;
+      } catch (err) {
+        console.error('Error loading cities:', err);
+      }
+    }
+
+    async function loadServices() {
+      try {
+        const res = await fetch(`${API}/services`);
+        const services = await res.json();
+        const servicesDiv = document.getElementById('services');
+        const serviceSelect = document.getElementById('service');
+        
+        let html = '';
+        let currentCategory = '';
+        let selectOptions = '<option>Select a service</option>';
+
+        services.forEach(s => {
+          if (currentCategory !== s.category) {
+            currentCategory = s.category;
+            html += `<h3 class="category-title"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span>${s.category.toUpperCase()}</h3>`;
+          }
+          const commission = (parseFloat(s.price) * 0.20).toFixed(2);
+          const total = (parseFloat(s.price) + parseFloat(commission)).toFixed(2);
+          html += `
+            <div class="card">
+              <h3>${s.name}</h3>
+              <p>${s.description}</p>
+              <p>Duration: ${s.duration_minutes} min | Base: $${s.price} + Commission: $${commission} = Total: <span class="price">$${total}</span></p>
+              <p style="color: #28a745; font-weight: bold;">✓ Available in 43 cities</p>
+            </div>
+          `;
+          selectOptions += `<option value="${s.id}">${s.name} - $${total}</option>`;
+        });
+
+        servicesDiv.innerHTML = html;
+        serviceSelect.innerHTML = selectOptions;
+      } catch (err) {
+        console.error('Error loading services:', err);
+      }
+    }
+
+    async function loadEarnings() {
+      try {
+        // Only allow authenticated users to see earnings
+        if (!token) {
+          alert('❌ You must be logged in to view earnings!');
+          return;
+        }
+        const res = await fetch(`${API}/earnings`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const earnings = await res.json();
+        const subRes = await fetch(`${API}/subscription`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const sub = await subRes.json();
+        
+        const totalCommission = parseFloat(earnings.total_commission || 0);
+        const totalBookings = earnings.total_bookings || 0;
+        const baseRevenue = totalCommission / 0.20;
+        
+        document.getElementById('totalEarnings').textContent = `$${totalCommission.toFixed(2)}`;
+        document.getElementById('totalBookings').textContent = totalBookings;
+        document.getElementById('activePlan').textContent = (sub.plan || 'free').toUpperCase();
+        document.getElementById('baseRevenue').textContent = `$${baseRevenue.toFixed(2)}`;
+        document.getElementById('commissionRevenue').textContent = `$${totalCommission.toFixed(2)}`;
+        document.getElementById('totalRevenue').textContent = `$${(baseRevenue + totalCommission).toFixed(2)}`;
+        document.getElementById('avgCommission').textContent = '20%';
+        
+        // Get booking stats
+        const bookingsRes = await fetch(`${API}/bookings`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const bookings = await bookingsRes.json();
+        const pending = bookings.filter(b => b.status === 'pending').length;
+        const confirmed = bookings.filter(b => b.status === 'confirmed').length;
+        const cancelled = bookings.filter(b => b.status === 'cancelled').length;
+        
+        document.getElementById('pendingBookings').textContent = pending;
+        document.getElementById('confirmedBookings').textContent = confirmed;
+        document.getElementById('cancelledBookings').textContent = cancelled;
+        
+        // Display cancelled bookings
+        const cancelledBookingsList = document.getElementById('cancelledBookingsList');
+        const cancelledList = bookings.filter(b => b.status === 'cancelled');
+        
+        if (cancelledList.length === 0) {
+          cancelledBookingsList.innerHTML = '<p style="color: #999;">No cancelled bookings</p>';
+        } else {
+          cancelledBookingsList.innerHTML = cancelledList.map(b => `
+            <div style="background: #fff3cd; padding: 12px; border-radius: 5px; margin-bottom: 10px; border-left: 3px solid #dc3545;">
+              <p style="font-weight: bold; color: #333; margin-bottom: 5px;">${b.name}</p>
+              <p style="font-size: 0.9em; color: #666; margin-bottom: 5px;">📍 ${b.address}, ${b.city}</p>
+              <p style="font-size: 0.9em; color: #666; margin-bottom: 5px;">📅 ${b.booking_date} at ${b.booking_time}</p>
+              <p style="font-size: 0.9em; color: #999;">💰 $${b.price}</p>
+            </div>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Error loading earnings:', err);
+      }
+    }
+
+    async function loadOrders() {
+      try {
+        if (!localStorage.getItem('token')) {
+          return;
+        }
+        
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API}/bookings`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const bookings = await res.json();
+        
+        let ordersHtml = '';
+        
+        if (bookings.length === 0) {
+          ordersHtml = '<p style="color: #999; text-align: center; padding: 20px;">No orders yet</p>';
+        } else {
+          bookings.forEach(b => {
+            const commission = (parseFloat(b.price || 0) * 0.20).toFixed(2);
+            const statusColor = b.status === 'pending' ? '#ffc107' : b.status === 'confirmed' ? '#28a745' : '#dc3545';
+            const statusEmoji = b.status === 'pending' ? '⏳' : b.status === 'confirmed' ? '✅' : '❌';
+            
+            ordersHtml += `
+              <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid ${statusColor}; display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex: 1;">
+                  <p style="color: #333; font-weight: bold; margin: 0 0 5px 0;">📦 ${b.service_name || 'Service'}</p>
+                  <p style="color: #666; font-size: 0.9em; margin: 0 0 5px 0;">📍 ${b.city} - ${b.booking_date} at ${b.booking_time}</p>
+                  <p style="color: #999; font-size: 0.85em; margin: 0;">Order ID: ${b.id.substring(0, 8)}...</p>
+                </div>
+                <div style="text-align: right;">
+                  <p style="color: #333; font-weight: bold; margin: 0 0 5px 0;">$${b.price || '0.00'}</p>
+                  <p style="color: #28a745; font-weight: bold; margin: 0 0 5px 0;">Commission: $${commission}</p>
+                  <p style="color: ${statusColor}; font-weight: bold; margin: 0;">${statusEmoji} ${b.status.toUpperCase()}</p>
+                </div>
+              </div>
+            `;
+          });
+        }
+        
+        const ordersDiv = document.getElementById('ordersList');
+        if (ordersDiv) {
+          ordersDiv.innerHTML = ordersHtml;
+        }
+      } catch (err) {
+        console.error('Error loading orders:', err);
+      }
+    }
+
+    async function loadBookings() {
+      if (!token) return;
+      try {
+        const res = await fetch(`${API}/bookings`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const bookings = await res.json();
+        const bookingsDiv = document.getElementById('bookings');
+        
+        if (bookings.length === 0) {
+          bookingsDiv.innerHTML = '<p style="color: white;">No bookings yet. Start booking now!</p>';
+          return;
+        }
+        
+        bookingsDiv.innerHTML = bookings.map(b => `
+          <div class="card">
+            <h3>${b.name}</h3>
+            <p>📍 ${b.address}, ${b.city}</p>
+            <p>📅 ${b.booking_date} at ${b.booking_time}</p>
+            <p>💰 <span class="price">$${b.price}</span></p>
+            <p>Status: <span class="status-${b.status}">${b.status.toUpperCase()}</span></p>
+            ${b.status !== 'cancelled' ? `<button class="cancel-btn" data-booking-id="${b.id}">Cancel Booking</button>` : ''}
+          </div>
+        `).join('');
+        
+        document.querySelectorAll('.cancel-btn').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const bookingId = this.getAttribute('data-booking-id');
+            cancelBooking(bookingId);
+          });
+        });
+      } catch (err) {
+        console.error('Error loading bookings:', err);
+      }
+    }
+
+    function cancelBooking(bookingId) {
+      if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('PATCH', `${API}/bookings/${bookingId}`, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          alert('Booking cancelled successfully');
+          loadBookings();
+          loadEarnings();
+        } else {
+          alert('Error: ' + (xhr.responseText || 'Failed to cancel'));
+        }
+      };
+      
+      xhr.onerror = function() {
+        alert('Error: Request failed');
+      };
+      
+      xhr.send(JSON.stringify({ status: 'cancelled' }));
+    }
+
+    async function loadPublicServices() {
+      try {
+        const res = await fetch(`${API}/services`);
+        const services = await res.json();
+        const publicServicesDiv = document.getElementById('publicServicesList');
+        
+        let html = '';
+        let currentCategory = '';
+        let serviceCount = 0;
+
+        services.forEach(s => {
+          if (currentCategory !== s.category) {
+            currentCategory = s.category;
+            html += `<h4 style="color: #333; margin-top: 20px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #667eea;"><span class="category-emoji">${categoryEmojis[s.category] || '•'}</span> ${s.category.toUpperCase()}</h4>`;
+          }
+          const commission = (parseFloat(s.price) * 0.20).toFixed(2);
+          const total = (parseFloat(s.price) + parseFloat(commission)).toFixed(2);
+          html += `
+            <div style="background: #f9f9f9; padding: 12px; border-radius: 5px; margin-bottom: 10px; border-left: 3px solid #667eea;">
+              <p style="font-weight: bold; color: #333; margin-bottom: 5px;">${s.name}</p>
+              <p style="font-size: 0.9em; color: #666; margin-bottom: 5px;">${s.description}</p>
+              <p style="font-size: 0.85em; color: #999; margin-bottom: 5px;">⏱️ ${s.duration_minutes} min | 💰 $${total}</p>
+              <p style="font-size: 0.85em; color: #28a745;">✓ Available in 43 cities</p>
+            </div>
+          `;
+          serviceCount++;
+        });
+
+        html += `<p style="text-align: center; color: #667eea; font-weight: bold; margin-top: 20px;">Total: ${serviceCount} Services</p>`;
+        publicServicesDiv.innerHTML = html;
+      } catch (err) {
+        console.error('Error loading public services:', err);
+      }
+    }
+
+    async function createBooking() {
+      const service_id = document.getElementById('service').value;
+      const booking_date = document.getElementById('date').value;
+      const booking_time = document.getElementById('time').value;
+      const address = document.getElementById('address').value;
+      const city = document.getElementById('city').value;
+
+      if (!service_id || service_id === 'Select a service' || !booking_date || !booking_time || !address || !city || city === 'Select a city') {
+        alert('Please fill all fields');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/bookings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ service_id, booking_date, booking_time, address, city })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          alert('Booking created! Commission: $' + parseFloat(data.commission).toFixed(2));
+          document.getElementById('date').value = '';
+          document.getElementById('time').value = '';
+          document.getElementById('address').value = '';
+          document.getElementById('city').value = '';
+          document.getElementById('service').value = '';
+          loadBookings();
+          loadEarnings();
+        } else {
+          const data = await res.json();
+          alert('Error: ' + (data.error || 'Booking failed'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    let userLat = null, userLng = null;
+    let map = null;
+    let userMarker = null;
+
+    function getLocation() {
+      if (!navigator.geolocation) {
+        alert('Geolocation not supported by your browser');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          userLat = position.coords.latitude;
+          userLng = position.coords.longitude;
+          
+          document.getElementById('locationInfo').style.display = 'block';
+          document.getElementById('locationCoords').textContent = userLat.toFixed(4) + ', ' + userLng.toFixed(4);
+          
+          initMap();
+        },
+        function(error) {
+          alert('Location access denied or unavailable: ' + error.message);
+        }
+      );
+    }
+
+    function initMap() {
+      if (!document.getElementById('map')) return;
+      
+      if (map) map.remove();
+      map = L.map('map').setView([userLat, userLng], 15);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+      }).addTo(map);
+      
+      userMarker = L.marker([userLat, userLng]).addTo(map)
+        .bindPopup('📍 Your Location')
+        .openPopup();
+    }
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return (R * c).toFixed(2);
+    }
+  </script>
+</body>
+</html>
