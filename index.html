@@ -208,7 +208,11 @@
           <p style="margin: 0; color: #666;">Current Plan: <span id="planName" style="font-weight: bold; color: #667eea;">Free</span></p>
           <p style="margin: 5px 0 0 0; color: #999; font-size: 0.9em;">Bookings used: <span id="bookingsUsed">0</span>/<span id="bookingsLimit">10</span></p>
         </div>
-        <div id="plansContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;"></div>
+        <div id="plansContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"></div>
+        <div id="planUpgradeContainer" style="display: none; background: #f9f9f9; padding: 20px; border-radius: 10px; border: 2px solid #667eea;">
+          <h4 style="color: #667eea; margin-top: 0;">Complete Payment</h4>
+          <div id="planUpgradeButtons"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -608,24 +612,61 @@
         return;
       }
 
+      const planNames = { pro: 'Pro', premium: 'Premium' };
       const planPrices = { pro: 9.99, premium: 29.99 };
       const price = planPrices[planId];
+      const name = planNames[planId];
       
       try {
+        // Create PayPal order for subscription
         const res = await fetch(`${API}/payments/paypal/create-order`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ booking_id: `subscription_${planId}`, amount: price })
+          body: JSON.stringify({ booking_id: `plan_${planId}`, amount: price })
         });
         const orderData = await res.json();
         
-        if (orderData.id) {
-          // Redirect to PayPal
-          const approveUrl = orderData.links?.find(link => link.rel === 'approve')?.href;
-          if (approveUrl) {
-            window.location.href = approveUrl;
-          }
+        if (!orderData.id) {
+          alert('Error creating payment: ' + JSON.stringify(orderData));
+          return;
         }
+        
+        // Store plan info for after approval
+        localStorage.setItem('pendingPlanUpgrade', planId);
+        
+        // Render PayPal button for subscription
+        document.getElementById('planUpgradeContainer').style.display = 'block';
+        
+        paypal.Buttons({
+          createOrder: () => orderData.id,
+          onApprove: async (data) => {
+            const captureRes = await fetch(`${API}/payments/paypal/capture-order`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ order_id: data.orderID, booking_id: `plan_${planId}` })
+            });
+            const result = await captureRes.json();
+            
+            if (result.status === 'COMPLETED') {
+              // Now upgrade the subscription
+              const upgradeRes = await fetch(`${API}/subscription/upgrade`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: planId })
+              });
+              const upgradeData = await upgradeRes.json();
+              
+              if (upgradeRes.ok) {
+                alert(`Upgraded to ${name} plan!`);
+                localStorage.removeItem('pendingPlanUpgrade');
+                loadCurrentSubscription();
+                loadSubscriptionPlans();
+                document.getElementById('planUpgradeContainer').style.display = 'none';
+              }
+            }
+          },
+          onError: (err) => alert('Payment error: ' + err)
+        }).render('#planUpgradeButtons');
       } catch (err) {
         alert('Error: ' + err.message);
       }

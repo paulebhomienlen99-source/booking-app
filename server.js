@@ -647,10 +647,39 @@ app.post('/subscription/upgrade', verifyToken, async (req, res) => {
     const planLimits = { pro: 50, premium: 999 };
     const planPrices = { pro: 9.99, premium: 29.99 };
     
+    // Get user email for receipt
+    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [req.userId]);
+    const userEmail = userRes.rows[0]?.email;
+    
     const result = await client.query('SELECT id FROM subscriptions WHERE user_id = $1', [req.userId]);
     
     if (result.rows.length === 0) {
       await client.query(
+        'INSERT INTO subscriptions (id, user_id, plan, booking_limit, monthly_bookings) VALUES ($1, $2, $3, $4, $5)',
+        [uuidv4(), req.userId, plan, planLimits[plan], 0]
+      );
+    } else {
+      await client.query(
+        'UPDATE subscriptions SET plan = $1, booking_limit = $2, monthly_bookings = 0 WHERE user_id = $3',
+        [plan, planLimits[plan], req.userId]
+      );
+    }
+    
+    // Send upgrade confirmation email
+    const emailHtml = `
+      <h2>Subscription Upgraded!</h2>
+      <p>Your subscription has been upgraded to <strong>${plan.toUpperCase()}</strong> plan.</p>
+      <p>Price: $${planPrices[plan]}/month</p>
+      <p>Bookings limit: ${planLimits[plan] === 999 ? 'Unlimited' : planLimits[plan]}/month</p>
+      <p>Thank you for supporting BookHub!</p>
+    `;
+    await sendEmail(userEmail, `BookHub: Upgraded to ${plan} plan`, emailHtml);
+    
+    res.json({ message: `Upgraded to ${plan} plan!`, plan, bookingLimit: planLimits[plan] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
         'INSERT INTO subscriptions (id, user_id, plan, booking_limit, renewal_price, auto_renew) VALUES ($1, $2, $3, $4, $5, $6)',
         [uuidv4(), req.userId, plan, planLimits[plan], planPrices[plan], true]
       );
