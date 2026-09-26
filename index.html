@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://www.paypal.com/sdk/js?client-id=AQCm0jzZvrpyTnNvUe2wEKg4XtZ9T9bJGR4s2FV6InBt4nTYlQFQ1PkF0_-HAmslYpAMlqRFoeG5Igb7&currency=USD"></script>
-  <script src="https://js.stripe.com/v3/"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
@@ -116,22 +115,8 @@
         <button onclick="createBooking()" style="width: 100%; padding: 14px; background: white; color: #667eea; font-weight: bold; font-size: 1.1em;">🎉 Book Now</button>
         
         <div id="paymentMethodContainer" style="margin-top: 20px; display: none;">
-          <h3 style="color: white; margin-bottom: 15px; text-align: center;">💳 Select Payment Method</h3>
-          <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <button onclick="selectPaymentMethod('paypal')" id="paypal-btn" style="flex: 1; background: #0070ba; padding: 12px;">PayPal</button>
-            <button onclick="selectPaymentMethod('stripe')" id="stripe-btn" style="flex: 1; background: #5469d4; padding: 12px;">💳 Card (Stripe)</button>
-          </div>
-          
-          <div id="paypalContainer" style="display: none;">
-            <h4 style="color: white; margin-bottom: 15px; text-align: center;">PayPal Checkout</h4>
-            <div id="paypal-button-container"></div>
-          </div>
-          
-          <div id="stripeContainer" style="display: none;">
-            <h4 style="color: white; margin-bottom: 15px; text-align: center;">Visa / Mastercard</h4>
-            <div id="stripe-card-element" style="background: white; padding: 12px; border-radius: 5px; margin-bottom: 15px;"></div>
-            <button onclick="stripePayment()" style="width: 100%; padding: 12px; background: #5469d4; color: white; font-weight: bold;">Pay Now</button>
-          </div>
+          <h3 style="color: white; margin-bottom: 15px; text-align: center;">💳 Pay with PayPal</h3>
+          <div id="paypal-button-container"></div>
         </div>
       </div>
     </div>
@@ -240,23 +225,9 @@
     let allCities = [];
     let userLat = null, userLng = null;
     let map = null;
-    let stripe, elements, cardElement;
     let lastBookingData = null;
-    let selectedPaymentMethod = 'paypal';
 
     if (token) showApp(); else showAuth();
-    
-    // Initialize Stripe
-    async function initStripe() {
-      const res = await fetch(`${API}/payments/stripe/config`);
-      const { publishableKey } = await res.json();
-      stripe = Stripe(publishableKey);
-      elements = stripe.elements();
-      cardElement = elements.create('card');
-      cardElement.mount('#stripe-card-element');
-    }
-    
-    if (token) initStripe();
 
     function switchTab(tab) {
       document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
@@ -430,99 +401,13 @@
           const data = await res.json();
           lastBookingData = data;
           document.getElementById('paymentMethodContainer').style.display = 'block';
-          selectPaymentMethod('paypal');
-          alert('Booking created! Now select payment method');
+          renderPayPalButton(data.id, data.totalPaid || data.price);
+          alert('Booking created! Now pay with PayPal');
         } else {
           const data = await res.json();
           alert('Error: ' + (data.error || 'Booking failed'));
         }
       } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    }
-
-    function selectPaymentMethod(method) {
-      selectedPaymentMethod = method;
-      document.getElementById('paypal-btn').style.background = method === 'paypal' ? '#0070ba' : '#ccc';
-      document.getElementById('stripe-btn').style.background = method === 'stripe' ? '#5469d4' : '#ccc';
-      document.getElementById('paypalContainer').style.display = method === 'paypal' ? 'block' : 'none';
-      document.getElementById('stripeContainer').style.display = method === 'stripe' ? 'block' : 'none';
-      
-      if (method === 'paypal') {
-        renderPayPalButton(lastBookingData.id, lastBookingData.totalPaid || lastBookingData.price);
-      }
-    }
-
-    async function stripePayment() {
-      if (!lastBookingData) return alert('No booking data');
-      
-      const amount = lastBookingData.totalPaid || lastBookingData.price;
-      console.log('Stripe Payment - Booking Data:', lastBookingData, 'Amount:', amount);
-      
-      if (!amount || amount <= 0) {
-        return alert('Invalid amount: ' + amount);
-      }
-      
-      try {
-        // Create payment intent
-        const intentRes = await fetch(`${API}/payments/stripe/create-payment-intent`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookingId: lastBookingData.id, amount: amount })
-        });
-        
-        const intentData = await intentRes.json();
-        console.log('Intent Response:', intentData);
-        
-        if (!intentRes.ok) {
-          return alert('Error creating payment: ' + (intentData.error || 'unknown error'));
-        }
-        
-        const { clientSecret } = intentData;
-        
-        if (!clientSecret) {
-          return alert('Error: No client secret received');
-        }
-        
-        // Confirm card payment
-        const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-          payment_method: {
-            card: cardElement,
-            billing_details: { email: userEmail }
-          }
-        });
-        
-        console.log('Payment Result:', { error, paymentIntent });
-        
-        if (error) {
-          alert('Payment failed: ' + error.message);
-        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-          // Confirm on backend
-          const confirmRes = await fetch(`${API}/payments/stripe/confirm-payment`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentIntentId: paymentIntent.id, bookingId: lastBookingData.id })
-          });
-          const confirmData = await confirmRes.json();
-          
-          if (confirmRes.ok) {
-            alert('Payment successful!');
-            document.getElementById('paymentMethodContainer').style.display = 'none';
-            document.getElementById('date').value = '';
-            document.getElementById('time').value = '';
-            document.getElementById('address').value = '';
-            document.getElementById('city').value = '';
-            document.getElementById('service').value = '';
-            loadBookings();
-            loadPaymentHistory();
-          } else {
-            alert('Backend error: ' + confirmData.error);
-          }
-        } else {
-          alert('Payment status: ' + (paymentIntent?.status || 'unknown'));
-        }
-      } catch (err) {
-        console.error('Stripe Payment Error:', err);
         alert('Error: ' + err.message);
       }
     }
