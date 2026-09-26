@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const paypal = require('@paypal/checkout-server-sdk');
 const nodemailer = require('nodemailer');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 require('dotenv').config();
 
 const app = express();
@@ -949,6 +950,107 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
 app.get('/payments/paypal/config', (req, res) => {
   res.json({
     clientId: process.env.PAYPAL_CLIENT_ID || 'test_client_id'
+  });
+});
+
+// STRIPE PAYMENT ENDPOINTS
+app.post('/payments/stripe/create-payment-intent', verifyToken, async (req, res) => {
+  const { bookingId, amount } = req.body;
+  
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(parseFloat(amount) * 100), // Convert to cents
+      currency: 'usd',
+      metadata: {
+        bookingId,
+        userId: req.userId
+      },
+      description: `BookHub Booking - ${bookingId}`
+    });
+    
+    res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id });
+  } catch (err) {
+    console.error('Stripe Payment Intent Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/payments/stripe/confirm-payment', verifyToken, async (req, res) => {
+  const { paymentIntentId, bookingId } = req.body;
+  
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    if (paymentIntent.status !== 'succeeded') {
+      return res.status(400).json({ error: 'Payment not successful', status: paymentIntent.status });
+    }
+    
+    // Get booking and service details
+    const bookingRes = await client.query(
+      'SELECT b.*, s.price, s.name as service_name, u.email, u.name FROM bookings b JOIN services s ON b.service_id = s.id JOIN users u ON b.user_id = u.id WHERE b.id = $1 AND b.user_id = $2',
+      [bookingId, req.userId]
+    );
+    
+    if (bookingRes.rows.length === 0) return res.status(404).json({ error: 'Booking not found' });
+    
+    const booking = bookingRes.rows[0];
+    const servicePrice = parseFloat(booking.price);
+    const commission = servicePrice * 0.20;
+    const totalPaid = servicePrice + commission;
+    
+    // Create payment record
+    const paymentId = uuidv4();
+    await client.query(
+      'INSERT INTO payments (id, booking_id, user_id, service_price, commission, total_paid, payment_status, paypal_transaction_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [paymentId, bookingId, req.userId, servicePrice, commission, totalPaid, 'completed', paymentIntent.charges.data[0].id]
+    );
+    
+    // Update booking status
+    await client.query('UPDATE bookings SET status = $1 WHERE id = $2', ['confirmed', bookingId]);
+    
+    // Update earnings
+    await client.query(
+      'UPDATE earnings SET total_commission = total_commission + $1, total_bookings = total_bookings + 1 WHERE id = $2',
+      [commission, '00000000-0000-0000-0000-000000000000']
+    );
+    
+    // Send email receipt
+    const emailHTML = `
+      <h2>📧 Payment Receipt - BookHub</h2>
+      <p>Hello <strong>${booking.name}</strong>,</p>
+      <p>Your payment has been successfully processed!</p>
+      <hr>
+      <h3>Booking Details:</h3>
+      <ul>
+        <li><strong>Service:</strong> ${booking.service_name}</li>
+        <li><strong>Date:</strong> ${booking.booking_date}</li>
+        <li><strong>Time:</strong> ${booking.booking_time}</li>
+        <li><strong>Location:</strong> ${booking.address}, ${booking.city}</li>
+        <li><strong>Service Price:</strong> $${servicePrice.toFixed(2)}</li>
+        <li><strong>Your Commission (20%):</strong> $${commission.toFixed(2)}</li>
+        <li><strong>Total Paid:</strong> $${totalPaid.toFixed(2)}</li>
+      </ul>
+      <hr>
+      <p><strong>Status:</strong> ✅ Payment Completed</p>
+      <p>Payment Method: 💳 Stripe Card Payment</p>
+      <p>Transaction ID: ${paymentIntent.charges.data[0].id}</p>
+      <hr>
+      <p>Thank you for booking with BookHub!</p>
+      <p>Questions? Contact us at support@bookhub.app</p>
+    `;
+    
+    await sendEmail(booking.email, 'Payment Receipt - BookHub Booking', emailHTML);
+    
+    res.json({ message: 'Payment confirmed successfully', paymentId, status: 'completed' });
+  } catch (err) {
+    console.error('Stripe Confirm Payment Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/payments/stripe/config', (req, res) => {
+  res.json({
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
   });
 });
 
