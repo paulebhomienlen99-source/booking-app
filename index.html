@@ -465,17 +465,21 @@
         });
         const { clientSecret } = await intentRes.json();
         
-        // Confirm card payment
-        const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
+        if (!clientSecret) {
+          return alert('Error creating payment: no client secret');
+        }
+        
+        // Confirm card payment using newer API
+        const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
             billing_details: { email: userEmail }
           }
-        });
+        }, { handleActions: true });
         
         if (error) {
           alert('Payment failed: ' + error.message);
-        } else if (paymentIntent.status === 'succeeded') {
+        } else if (paymentIntent && paymentIntent.status === 'succeeded') {
           // Confirm on backend
           const confirmRes = await fetch(`${API}/payments/stripe/confirm-payment`, {
             method: 'POST',
@@ -493,9 +497,13 @@
             document.getElementById('city').value = '';
             document.getElementById('service').value = '';
             loadBookings();
+            loadPaymentHistory();
           }
+        } else {
+          alert('Payment status: ' + (paymentIntent?.status || 'unknown'));
         }
       } catch (err) {
+        console.error('Stripe Payment Error:', err);
         alert('Error: ' + err.message);
       }
     }
