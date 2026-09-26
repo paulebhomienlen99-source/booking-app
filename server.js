@@ -73,10 +73,12 @@ async function initDB() {
     await client.query(`CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id) UNIQUE, plan VARCHAR(50) DEFAULT 'free', booking_limit INT DEFAULT 10, monthly_bookings INT DEFAULT 0, subscription_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, next_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 month', renewal_price DECIMAL(10, 2), auto_renew BOOLEAN DEFAULT true, paypal_subscription_id VARCHAR(255))`);
     await client.query(`CREATE TABLE IF NOT EXISTS payments (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id), user_id UUID NOT NULL REFERENCES users(id), service_price DECIMAL(10, 2) NOT NULL, commission DECIMAL(10, 2) NOT NULL, total_paid DECIMAL(10, 2) NOT NULL, payment_status VARCHAR(50) DEFAULT 'completed', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS earnings (id UUID PRIMARY KEY, total_commission DECIMAL(12, 2) DEFAULT 0, total_bookings INT DEFAULT 0, last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS admin_users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     
     // Initialize earnings tracker
     await client.query(`INSERT INTO earnings (id) SELECT '00000000-0000-0000-0000-000000000000' WHERE NOT EXISTS (SELECT 1 FROM earnings)`);
     console.log('✓ Subscriptions, payments, and earnings tables created');
+    console.log('✓ Admin users table created');
     console.log('✓ Bookings table created');
     
     // Insert services
@@ -932,7 +934,141 @@ app.get('/payments/paypal/config', (req, res) => {
   });
 });
 
+// ADMIN PANEL ENDPOINTS
+const ADMIN_EMAIL = 'admin@bookhub.app';
+const ADMIN_PASSWORD = 'Admin@BookHub2024';
+
+app.post('/admin/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    if (email !== ADMIN_EMAIL) return res.status(401).json({ error: 'Invalid admin credentials' });
+    
+    const adminRes = await client.query('SELECT id, password_hash FROM admin_users WHERE email = $1', [email]);
+    if (adminRes.rows.length === 0) return res.status(401).json({ error: 'Admin not found' });
+    
+    const admin = adminRes.rows[0];
+    const validPassword = await bcrypt.compare(password, admin.password_hash);
+    if (!validPassword) return res.status(401).json({ error: 'Invalid password' });
+    
+    const token = jwt.sign({ adminId: admin.id, email }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, message: 'Admin logged in' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function verifyAdmin(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token' });
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded.adminId) return res.status(401).json({ error: 'Not an admin token' });
+    req.adminId = decoded.adminId;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+app.get('/admin/dashboard', verifyAdmin, async (req, res) => {
+  try {
+    const totalUsers = await client.query('SELECT COUNT(*) FROM users');
+    const totalBookings = await client.query('SELECT COUNT(*) FROM bookings');
+    const totalPayments = await client.query('SELECT SUM(total_paid) as total FROM payments');
+    const totalEarnings = await client.query('SELECT total_commission FROM earnings');
+    
+    res.json({
+      totalUsers: parseInt(totalUsers.rows[0].count),
+      totalBookings: parseInt(totalBookings.rows[0].count),
+      totalPayments: parseFloat(totalPayments.rows[0]?.total || 0),
+      totalEarnings: parseFloat(totalEarnings.rows[0]?.total_commission || 0)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/admin/users', verifyAdmin, async (req, res) => {
+  try {
+    const result = await client.query('SELECT id, email, name, created_at FROM users ORDER BY created_at DESC LIMIT 100');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/admin/bookings', verifyAdmin, async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT b.id, b.user_id, b.booking_date, b.status, b.address, b.city,
+        s.name as service_name, s.price,
+        u.name as user_name, u.email
+      FROM bookings b
+      JOIN services s ON b.service_id = s.id
+      JOIN users u ON b.user_id = u.id
+      ORDER BY b.created_at DESC
+      LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/admin/payments', verifyAdmin, async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT p.id, p.service_price, p.commission, p.total_paid, p.payment_status, p.created_at,
+        b.city, s.name as service_name,
+        u.name as user_name, u.email
+      FROM payments p
+      JOIN bookings b ON p.booking_id = b.id
+      JOIN services s ON b.service_id = s.id
+      JOIN users u ON p.user_id = u.id
+      ORDER BY p.created_at DESC
+      LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/admin/subscriptions', verifyAdmin, async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT s.id, s.user_id, s.plan, s.booking_limit, s.monthly_bookings, s.renewal_price, s.auto_renew, s.subscription_date,
+        u.name, u.email
+      FROM subscriptions s
+      JOIN users u ON s.user_id = u.id
+      ORDER BY s.subscription_date DESC
+      LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/admin/bookings/:id/status', verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  
+  try {
+    if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    await client.query('UPDATE bookings SET status = $1 WHERE id = $2', [status, id]);
+    res.json({ message: 'Booking status updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
+app.get('/admin', (req, res) => res.sendFile(__dirname + '/admin.html'));
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
