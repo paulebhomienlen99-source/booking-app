@@ -456,26 +456,43 @@
     async function stripePayment() {
       if (!lastBookingData) return alert('No booking data');
       
+      const amount = lastBookingData.totalPaid || lastBookingData.price;
+      console.log('Stripe Payment - Booking Data:', lastBookingData, 'Amount:', amount);
+      
+      if (!amount || amount <= 0) {
+        return alert('Invalid amount: ' + amount);
+      }
+      
       try {
         // Create payment intent
         const intentRes = await fetch(`${API}/payments/stripe/create-payment-intent`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookingId: lastBookingData.id, amount: lastBookingData.totalPaid || lastBookingData.price })
+          body: JSON.stringify({ bookingId: lastBookingData.id, amount: amount })
         });
-        const { clientSecret } = await intentRes.json();
         
-        if (!clientSecret) {
-          return alert('Error creating payment: no client secret');
+        const intentData = await intentRes.json();
+        console.log('Intent Response:', intentData);
+        
+        if (!intentRes.ok) {
+          return alert('Error creating payment: ' + (intentData.error || 'unknown error'));
         }
         
-        // Confirm card payment using newer API
+        const { clientSecret } = intentData;
+        
+        if (!clientSecret) {
+          return alert('Error: No client secret received');
+        }
+        
+        // Confirm card payment
         const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
             billing_details: { email: userEmail }
           }
-        }, { handleActions: true });
+        });
+        
+        console.log('Payment Result:', { error, paymentIntent });
         
         if (error) {
           alert('Payment failed: ' + error.message);
@@ -498,6 +515,8 @@
             document.getElementById('service').value = '';
             loadBookings();
             loadPaymentHistory();
+          } else {
+            alert('Backend error: ' + confirmData.error);
           }
         } else {
           alert('Payment status: ' + (paymentIntent?.status || 'unknown'));
