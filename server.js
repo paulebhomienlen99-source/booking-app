@@ -1053,6 +1053,188 @@ app.get('/payments/:paymentId/refund-status', verifyToken, async (req, res) => {
   }
 });
 
+// REFUND REQUEST ENDPOINTS (Admin Approval Required)
+app.post('/payments/:paymentId/request-refund', verifyToken, async (req, res) => {
+  const { paymentId } = req.params;
+  const { refundAmount, reason } = req.body;
+  
+  try {
+    // Get payment details
+    const paymentRes = await client.query('SELECT * FROM payments WHERE id = $1 AND user_id = $2', [paymentId, req.userId]);
+    if (paymentRes.rows.length === 0) return res.status(404).json({ error: 'Payment not found' });
+    
+    const payment = paymentRes.rows[0];
+    if (payment.payment_status !== 'completed') return res.status(400).json({ error: 'Only completed payments can be refunded' });
+    if (payment.refund_status === 'pending' || payment.refund_status === 'approved') return res.status(400).json({ error: 'Refund already requested' });
+    
+    // Check 7-day refund window
+    const createdDate = new Date(payment.created_at);
+    const now = new Date();
+    const daysDiff = Math.floor((now - createdDate) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff > 7) {
+      return res.status(400).json({ error: `Refund window expired. You can only refund within 7 days of payment. Payment was made ${daysDiff} days ago.` });
+    }
+    
+    // Validate refund amount
+    const refundAmt = parseFloat(refundAmount) || parseFloat(payment.total_paid);
+    if (refundAmt > parseFloat(payment.total_paid)) {
+      return res.status(400).json({ error: 'Refund amount cannot exceed payment amount' });
+    }
+    if (refundAmt <= 0) {
+      return res.status(400).json({ error: 'Refund amount must be greater than 0' });
+    }
+    
+    // Create refund request (pending admin approval)
+    await client.query(
+      'UPDATE payments SET refund_status = $1, refund_amount = $2 WHERE id = $3',
+      ['pending', refundAmt, paymentId]
+    );
+    
+    // Send email to user
+    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [req.userId]);
+    const userEmail = userRes.rows[0]?.email;
+    
+    const emailHtml = `
+      <h2>Refund Request Submitted</h2>
+      <p>Your refund request for <strong>$${refundAmt.toFixed(2)}</strong> has been submitted.</p>
+      <p><strong>Reason:</strong> ${reason || 'No reason provided'}</p>
+      <p><strong>Status:</strong> Pending Admin Approval</p>
+      <p>Our admin team will review your request and process it within 24-48 hours.</p>
+      <p>Thank you for your patience!</p>
+    `;
+    await sendEmail(userEmail, 'BookHub: Refund Request Received', emailHtml);
+    
+    res.json({ message: 'Refund request submitted for admin approval', status: 'pending' });
+  } catch (err) {
+    console.error('Refund Request Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/admin/refund-requests', verifyAdmin, async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT p.id, p.booking_id, p.user_id, p.total_paid, p.refund_amount, p.refund_status, p.created_at,
+        b.city, s.name as service_name,
+        u.name as user_name, u.email
+      FROM payments p
+      JOIN bookings b ON p.booking_id = b.id
+      JOIN services s ON b.service_id = s.id
+      JOIN users u ON p.user_id = u.id
+      WHERE p.refund_status IN ('pending', 'approved', 'rejected')
+      ORDER BY p.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/admin/refund-requests/:paymentId/approve', verifyAdmin, async (req, res) => {
+  const { paymentId } = req.params;
+  
+  try {
+    // Get payment details
+    const paymentRes = await client.query('SELECT * FROM payments WHERE id = $1', [paymentId]);
+    if (paymentRes.rows.length === 0) return res.status(404).json({ error: 'Payment not found' });
+    
+    const payment = paymentRes.rows[0];
+    if (payment.refund_status !== 'pending') return res.status(400).json({ error: 'Only pending refunds can be approved' });
+    
+    const refundAmount = payment.refund_amount;
+    const txnRes = await client.query('SELECT paypal_transaction_id FROM bookings WHERE id = $1', [payment.booking_id]);
+    const txnId = txnRes.rows[0]?.paypal_transaction_id;
+    
+    if (!txnId) return res.status(400).json({ error: 'No transaction ID found' });
+    
+    // Process PayPal refund
+    const auth = Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64');
+    
+    const refundRes = await fetch(`https://api.sandbox.paypal.com/v2/payments/captures/${txnId}/refund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${auth}`
+      },
+      body: JSON.stringify({
+        amount: {
+          currency_code: 'USD',
+          value: refundAmount.toString()
+        },
+        note_to_payer: 'Approved refund request'
+      })
+    });
+    
+    const refundData = await refundRes.json();
+    if (!refundRes.ok) return res.status(400).json({ error: 'PayPal refund failed', details: refundData });
+    
+    // Update payment
+    await client.query(
+      'UPDATE payments SET refund_status = $1, refunded_at = NOW() WHERE id = $2',
+      ['approved', paymentId]
+    );
+    
+    // Deduct from earnings if full refund
+    if (parseFloat(refundAmount) === parseFloat(payment.total_paid)) {
+      await client.query(
+        'UPDATE earnings SET total_commission = total_commission - $1 WHERE id = $2',
+        [payment.commission, '00000000-0000-0000-0000-000000000000']
+      );
+      await client.query('UPDATE bookings SET status = $1 WHERE id = $2', ['cancelled', payment.booking_id]);
+    }
+    
+    // Send approval email
+    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [payment.user_id]);
+    const userEmail = userRes.rows[0]?.email;
+    
+    const emailHtml = `
+      <h2>Refund Approved!</h2>
+      <p>Your refund of <strong>$${refundAmount.toFixed(2)}</strong> has been approved and processed.</p>
+      <p>Refund ID: ${refundData.id}</p>
+      <p>The funds should appear in your PayPal account within 3-5 business days.</p>
+      <p>Thank you for using BookHub!</p>
+    `;
+    await sendEmail(userEmail, 'BookHub: Refund Approved', emailHtml);
+    
+    res.json({ message: 'Refund approved and processed', refundId: refundData.id });
+  } catch (err) {
+    console.error('Admin Refund Approval Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/admin/refund-requests/:paymentId/reject', verifyAdmin, async (req, res) => {
+  const { paymentId } = req.params;
+  const { reason } = req.body;
+  
+  try {
+    const paymentRes = await client.query('SELECT * FROM payments WHERE id = $1', [paymentId]);
+    if (paymentRes.rows.length === 0) return res.status(404).json({ error: 'Payment not found' });
+    
+    const payment = paymentRes.rows[0];
+    if (payment.refund_status !== 'pending') return res.status(400).json({ error: 'Only pending refunds can be rejected' });
+    
+    await client.query('UPDATE payments SET refund_status = $1 WHERE id = $2', ['rejected', paymentId]);
+    
+    // Send rejection email
+    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [payment.user_id]);
+    const userEmail = userRes.rows[0]?.email;
+    
+    const emailHtml = `
+      <h2>Refund Request Rejected</h2>
+      <p>Your refund request of <strong>$${payment.refund_amount.toFixed(2)}</strong> has been rejected.</p>
+      <p><strong>Reason:</strong> ${reason || 'No reason provided'}</p>
+      <p>If you have any questions, please contact our support team.</p>
+    `;
+    await sendEmail(userEmail, 'BookHub: Refund Request Rejected', emailHtml);
+    
+    res.json({ message: 'Refund request rejected' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ADMIN PANEL ENDPOINTS
 const ADMIN_EMAIL = 'admin@bookhub.app';
 const ADMIN_PASSWORD = 'Admin@BookHub2024';
