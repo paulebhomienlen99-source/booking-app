@@ -236,6 +236,7 @@
       loadCities();
       loadServices();
       loadEarnings();
+      loadPaymentHistory();
       loadBookings();
       setInterval(loadBookings, 5000);
     }
@@ -500,6 +501,38 @@
         document.getElementById('totalRevenue').textContent = `$${(baseRevenue + totalCommission).toFixed(2)}`;
       } catch (err) {
         console.error('Error loading earnings:', err);
+      }
+    }
+
+    async function loadPaymentHistory() {
+      try {
+        const res = await fetch(`${API}/payment-history`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const payments = await res.json();
+        const tbody = document.getElementById('ordersTableBody');
+        
+        if (!payments || payments.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">No payments yet</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = payments.map(p => `
+          <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 12px;">${p.service_name}</td>
+            <td style="padding: 12px; text-align: center;">${p.city}</td>
+            <td style="padding: 12px; text-align: center;">${new Date(p.booking_date).toLocaleDateString()}</td>
+            <td style="padding: 12px; text-align: center;">$${parseFloat(p.total_paid).toFixed(2)}</td>
+            <td style="padding: 12px; text-align: center; color: #28a745; font-weight: bold;">$${parseFloat(p.commission).toFixed(2)}</td>
+            <td style="padding: 12px; text-align: center;">
+              <span style="background: ${p.payment_status === 'completed' ? '#28a745' : '#ffc107'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold;">
+                ${p.payment_status.toUpperCase()}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Error loading payment history:', err);
       }
     }
 

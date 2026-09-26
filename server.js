@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const paypal = require('@paypal/checkout-server-sdk');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
@@ -13,7 +14,31 @@ app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
 
-// PayPal Configuration
+// Email Configuration
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+// Function to send email
+async function sendEmail(to, subject, htmlContent) {
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      html: htmlContent
+    });
+    console.log(`Email sent to ${to}`);
+    return true;
+  } catch (err) {
+    console.error('Email error:', err.message);
+    return false;
+  }
+}
 let paypalClient;
 if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
   const clientId = process.env.PAYPAL_CLIENT_ID;
@@ -632,6 +657,24 @@ app.get('/earnings', async (req, res) => {
   }
 });
 
+app.get('/payment-history', verifyToken, async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT p.id, p.booking_id, p.service_price, p.commission, p.total_paid, p.payment_status, p.created_at,
+        b.city, s.name as service_name, b.booking_date
+      FROM payments p
+      JOIN bookings b ON p.booking_id = b.id
+      JOIN services s ON b.service_id = s.id
+      WHERE p.user_id = $1
+      ORDER BY p.created_at DESC
+      LIMIT 50
+    `, [req.userId]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/orders', verifyToken, async (req, res) => {
   try {
     const result = await client.query(`
@@ -800,6 +843,44 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
         'UPDATE payments SET payment_status = $1 WHERE booking_id = $2',
         ['completed', booking_id]
       );
+      
+      // Get booking and user details for email
+      const bookingRes = await client.query(
+        'SELECT b.*, s.name as service_name, s.price, u.email, u.name FROM bookings b JOIN services s ON b.service_id = s.id JOIN users u ON b.user_id = u.id WHERE b.id = $1',
+        [booking_id]
+      );
+      
+      if (bookingRes.rows.length > 0) {
+        const booking = bookingRes.rows[0];
+        const commission = booking.price * 0.20;
+        
+        // Send email receipt
+        const emailHTML = `
+          <h2>📧 Payment Receipt - BookHub</h2>
+          <p>Hello <strong>${booking.name}</strong>,</p>
+          <p>Your payment has been successfully processed!</p>
+          <hr>
+          <h3>Booking Details:</h3>
+          <ul>
+            <li><strong>Service:</strong> ${booking.service_name}</li>
+            <li><strong>Date:</strong> ${booking.booking_date}</li>
+            <li><strong>Time:</strong> ${booking.booking_time}</li>
+            <li><strong>Location:</strong> ${booking.address}, ${booking.city}</li>
+            <li><strong>Service Price:</strong> $${parseFloat(booking.price).toFixed(2)}</li>
+            <li><strong>Your Commission (20%):</strong> $${commission.toFixed(2)}</li>
+            <li><strong>Total Paid:</strong> $${(parseFloat(booking.price) + commission).toFixed(2)}</li>
+          </ul>
+          <hr>
+          <p><strong>Status:</strong> ✅ Payment Completed</p>
+          <p>Order ID: ${booking_id}</p>
+          <p>PayPal Transaction ID: ${order_id}</p>
+          <hr>
+          <p>Thank you for booking with BookHub!</p>
+          <p>Questions? Contact us at support@bookhub.app</p>
+        `;
+        
+        await sendEmail(booking.email, 'Payment Receipt - BookHub Booking', emailHTML);
+      }
       
       res.json({ status: 'COMPLETED', message: 'Payment captured successfully' });
     } else {
