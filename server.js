@@ -70,7 +70,7 @@ async function initDB() {
     console.log('✓ Cities table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, address VARCHAR(255), city VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8), user_latitude DECIMAL(10, 8), user_longitude DECIMAL(11, 8), status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id) UNIQUE, plan VARCHAR(50) DEFAULT 'free', booking_limit INT DEFAULT 10, monthly_bookings INT DEFAULT 0, subscription_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, next_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 month')`);
+    await client.query(`CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id) UNIQUE, plan VARCHAR(50) DEFAULT 'free', booking_limit INT DEFAULT 10, monthly_bookings INT DEFAULT 0, subscription_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, next_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 month', renewal_price DECIMAL(10, 2), auto_renew BOOLEAN DEFAULT true, paypal_subscription_id VARCHAR(255))`);
     await client.query(`CREATE TABLE IF NOT EXISTS payments (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id), user_id UUID NOT NULL REFERENCES users(id), service_price DECIMAL(10, 2) NOT NULL, commission DECIMAL(10, 2) NOT NULL, total_paid DECIMAL(10, 2) NOT NULL, payment_status VARCHAR(50) DEFAULT 'completed', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS earnings (id UUID PRIMARY KEY, total_commission DECIMAL(12, 2) DEFAULT 0, total_bookings INT DEFAULT 0, last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     
@@ -631,18 +631,55 @@ app.get('/subscription', verifyToken, async (req, res) => {
   }
 });
 
+app.get('/subscription-plans', (req, res) => {
+  res.json([
+    { id: 'free', name: 'Free', price: 0, bookings: 10, features: ['10 bookings/month', 'Basic support', 'Email notifications'] },
+    { id: 'pro', name: 'Pro', price: 9.99, bookings: 50, features: ['50 bookings/month', 'Priority support', 'Email notifications', 'Payment history'] },
+    { id: 'premium', name: 'Premium', price: 29.99, bookings: 999, features: ['Unlimited bookings', '24/7 support', 'Advanced analytics', 'API access', 'Custom branding'] }
+  ]);
+});
+
 app.post('/subscription/upgrade', verifyToken, async (req, res) => {
-  const { plan } = req.body;
+  const { plan, paypalOrderId } = req.body;
   try {
-    if (!['premium', 'pro'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
+    if (!['pro', 'premium'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
+    
+    const planLimits = { pro: 50, premium: 999 };
+    const planPrices = { pro: 9.99, premium: 29.99 };
     
     const result = await client.query('SELECT id FROM subscriptions WHERE user_id = $1', [req.userId]);
+    
     if (result.rows.length === 0) {
-      await client.query('INSERT INTO subscriptions (id, user_id, plan, booking_limit) VALUES ($1, $2, $3, $4)', [uuidv4(), req.userId, plan, plan === 'premium' ? 100 : 999]);
+      await client.query(
+        'INSERT INTO subscriptions (id, user_id, plan, booking_limit, renewal_price, auto_renew) VALUES ($1, $2, $3, $4, $5, $6)',
+        [uuidv4(), req.userId, plan, planLimits[plan], planPrices[plan], true]
+      );
     } else {
-      await client.query('UPDATE subscriptions SET plan = $1, booking_limit = $2, monthly_bookings = 0 WHERE user_id = $3', [plan, plan === 'premium' ? 100 : 999, req.userId]);
+      await client.query(
+        'UPDATE subscriptions SET plan = $1, booking_limit = $2, monthly_bookings = 0, renewal_price = $3, auto_renew = $4 WHERE user_id = $5',
+        [plan, planLimits[plan], planPrices[plan], true, req.userId]
+      );
     }
-    res.json({ message: `Upgraded to ${plan} plan!` });
+    
+    // Get user email for confirmation
+    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [req.userId]);
+    const userEmail = userRes.rows[0].email;
+    
+    // Send upgrade confirmation email
+    const emailHtml = `
+      <h2>Subscription Upgraded!</h2>
+      <p>Your subscription has been upgraded to <strong>${plan.toUpperCase()}</strong> plan.</p>
+      <p><strong>Plan Details:</strong></p>
+      <ul>
+        <li>Monthly Bookings: ${planLimits[plan]}</li>
+        <li>Price: $${planPrices[plan]}/month</li>
+        <li>Auto-Renewal: Enabled</li>
+      </ul>
+      <p>Thank you for choosing BookHub!</p>
+    `;
+    await sendEmail(userEmail, 'Subscription Upgraded', emailHtml);
+    
+    res.json({ message: `Upgraded to ${plan} plan!`, plan, booking_limit: planLimits[plan] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
