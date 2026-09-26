@@ -756,6 +756,28 @@
         maxZoom: 19
       }).addTo(map);
       L.marker([userLat, userLng]).addTo(map).bindPopup('📍 Your Location').openPopup();
+      
+      // Click on map to set address
+      map.on('click', async function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+        
+        try {
+          // Use Nominatim for reverse geocoding (free, no API key)
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          const data = await res.json();
+          
+          if (data.address) {
+            const address = data.address.road || data.address.village || data.address.town || data.address.city || data.display_name;
+            document.getElementById('address').value = address;
+            
+            // Add marker at clicked location
+            L.marker([lat, lng]).addTo(map).bindPopup('📍 Selected: ' + address).openPopup();
+          }
+        } catch (err) {
+          console.error('Reverse geocoding error:', err);
+        }
+      });
     }
   </script>
 </body>
