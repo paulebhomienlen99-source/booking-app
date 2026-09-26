@@ -526,6 +526,15 @@ async function initDB() {
       );
     }
     console.log('✓ 300+ cities from USA, Italy, Japan, and China inserted');
+    
+    // Create default admin user
+    const adminPasswordHash = await bcrypt.hash('Admin@BookHub2024', 10);
+    await client.query(
+      'INSERT INTO admin_users (id, email, password_hash, name) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
+      [uuidv4(), 'admin@bookhub.app', adminPasswordHash, 'BookHub Admin']
+    );
+    console.log('✓ Admin user created (email: admin@bookhub.app, password: Admin@BookHub2024)');
+    
     console.log('Database initialization complete!');
   } catch (err) {
     console.error('DB init error:', err.message);
