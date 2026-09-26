@@ -538,9 +538,10 @@
             <td style="padding: 12px; text-align: center;">$${parseFloat(p.total_paid).toFixed(2)}</td>
             <td style="padding: 12px; text-align: center; color: #28a745; font-weight: bold;">$${parseFloat(p.commission).toFixed(2)}</td>
             <td style="padding: 12px; text-align: center;">
-              <span style="background: ${p.payment_status === 'completed' ? '#28a745' : '#ffc107'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold;">
+              <span style="background: ${p.payment_status === 'completed' ? '#28a745' : p.payment_status === 'refunded' ? '#dc3545' : '#ffc107'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold;">
                 ${p.payment_status.toUpperCase()}
               </span>
+              ${p.payment_status === 'completed' ? `<button onclick="refundPayment('${p.id}', ${p.total_paid})" style="margin-left: 10px; padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em;">Refund</button>` : ''}
             </td>
           </tr>
         `).join('');
@@ -562,6 +563,30 @@
         if (res.ok) {
           alert('Booking cancelled');
           loadBookings();
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function refundPayment(paymentId) {
+      if (!confirm('Are you sure you want to refund this payment? This will cancel your booking.')) return;
+      
+      try {
+        const res = await fetch(`${API}/payments/${paymentId}/refund`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+          alert('Refund processed! You will receive the funds within 3-5 business days.');
+          loadPaymentHistory();
+          loadBookings();
+        } else {
+          alert('Error: ' + (data.error || 'Refund failed'));
         }
       } catch (err) {
         alert('Error: ' + err.message);

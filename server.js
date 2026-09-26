@@ -69,9 +69,9 @@ async function initDB() {
     await client.query(`CREATE TABLE IF NOT EXISTS cities (id UUID PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE, country VARCHAR(100) NOT NULL, region VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8))`);
     console.log('✓ Cities table created');
     
-    await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, address VARCHAR(255), city VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8), user_latitude DECIMAL(10, 8), user_longitude DECIMAL(11, 8), status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, address VARCHAR(255), city VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8), user_latitude DECIMAL(10, 8), user_longitude DECIMAL(11, 8), status VARCHAR(50) DEFAULT 'pending', paypal_transaction_id VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id) UNIQUE, plan VARCHAR(50) DEFAULT 'free', booking_limit INT DEFAULT 10, monthly_bookings INT DEFAULT 0, subscription_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, next_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 month', renewal_price DECIMAL(10, 2), auto_renew BOOLEAN DEFAULT true, paypal_subscription_id VARCHAR(255))`);
-    await client.query(`CREATE TABLE IF NOT EXISTS payments (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id), user_id UUID NOT NULL REFERENCES users(id), service_price DECIMAL(10, 2) NOT NULL, commission DECIMAL(10, 2) NOT NULL, total_paid DECIMAL(10, 2) NOT NULL, payment_status VARCHAR(50) DEFAULT 'completed', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS payments (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id), user_id UUID NOT NULL REFERENCES users(id), service_price DECIMAL(10, 2) NOT NULL, commission DECIMAL(10, 2) NOT NULL, total_paid DECIMAL(10, 2) NOT NULL, payment_status VARCHAR(50) DEFAULT 'completed', paypal_transaction_id VARCHAR(255), refund_status VARCHAR(50), refund_amount DECIMAL(10, 2), refunded_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS earnings (id UUID PRIMARY KEY, total_commission DECIMAL(12, 2) DEFAULT 0, total_bookings INT DEFAULT 0, last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS admin_users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     
@@ -882,10 +882,19 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
     console.log('PayPal Order Captured:', { status: response.status, orderId: order_id });
     
     if (response.ok && data.status === 'COMPLETED') {
+      // Get transaction ID from response
+      const transactionId = data.purchase_units?.[0]?.payments?.captures?.[0]?.id || order_id;
+      
       // Update payment status in database
       await client.query(
-        'UPDATE payments SET payment_status = $1 WHERE booking_id = $2',
-        ['completed', booking_id]
+        'UPDATE payments SET payment_status = $1, paypal_transaction_id = $2 WHERE booking_id = $3',
+        ['completed', transactionId, booking_id]
+      );
+      
+      // Store transaction ID in booking for refunds
+      await client.query(
+        'UPDATE bookings SET paypal_transaction_id = $1 WHERE id = $2',
+        [transactionId, booking_id]
       );
       
       // Get booking and user details for email
@@ -941,6 +950,107 @@ app.get('/payments/paypal/config', (req, res) => {
   res.json({
     clientId: process.env.PAYPAL_CLIENT_ID || 'test_client_id'
   });
+});
+
+// REFUND ENDPOINTS
+app.post('/payments/:paymentId/refund', verifyToken, async (req, res) => {
+  const { paymentId } = req.params;
+  
+  try {
+    // Get payment details
+    const paymentRes = await client.query('SELECT * FROM payments WHERE id = $1 AND user_id = $2', [paymentId, req.userId]);
+    if (paymentRes.rows.length === 0) return res.status(404).json({ error: 'Payment not found' });
+    
+    const payment = paymentRes.rows[0];
+    if (payment.payment_status === 'refunded') return res.status(400).json({ error: 'Payment already refunded' });
+    
+    // Get booking and booking's user
+    const bookingRes = await client.query('SELECT id, user_id FROM bookings WHERE id = $1', [payment.booking_id]);
+    const booking = bookingRes.rows[0];
+    
+    // Only allow refund by payment owner or admin
+    if (req.userId !== payment.user_id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Process PayPal refund (using stored transaction ID from payment)
+    const auth = Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64');
+    
+    // Get the transaction ID from the booking
+    const txnRes = await client.query('SELECT paypal_transaction_id FROM bookings WHERE id = $1', [payment.booking_id]);
+    const txnId = txnRes.rows[0]?.paypal_transaction_id;
+    
+    if (!txnId) {
+      return res.status(400).json({ error: 'Cannot refund this payment - no transaction ID found' });
+    }
+    
+    // Call PayPal refund API
+    const refundRes = await fetch(`https://api.sandbox.paypal.com/v2/payments/captures/${txnId}/refund`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${auth}`
+      },
+      body: JSON.stringify({
+        amount: {
+          currency_code: 'USD',
+          value: payment.total_paid.toString()
+        },
+        note_to_payer: 'Booking refund'
+      })
+    });
+    
+    const refundData = await refundRes.json();
+    
+    if (!refundRes.ok) {
+      console.error('PayPal Refund Error:', refundData);
+      return res.status(400).json({ error: 'Refund failed', details: refundData });
+    }
+    
+    // Update payment status to refunded
+    await client.query('UPDATE payments SET payment_status = $1 WHERE id = $2', ['refunded', paymentId]);
+    
+    // Update booking status to cancelled
+    await client.query('UPDATE bookings SET status = $1 WHERE id = $2', ['cancelled', payment.booking_id]);
+    
+    // Deduct from earnings
+    await client.query(
+      'UPDATE earnings SET total_commission = total_commission - $1 WHERE id = $2',
+      [payment.commission, '00000000-0000-0000-0000-000000000000']
+    );
+    
+    // Send refund email to user
+    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [req.userId]);
+    const userEmail = userRes.rows[0]?.email;
+    
+    const emailHtml = `
+      <h2>Refund Processed!</h2>
+      <p>Your refund of <strong>$${payment.total_paid}</strong> has been processed successfully.</p>
+      <p>Refund ID: ${refundData.id}</p>
+      <p>The funds should appear in your PayPal account within 3-5 business days.</p>
+      <p>Booking Status: Cancelled</p>
+      <p>Thank you for using BookHub!</p>
+    `;
+    await sendEmail(userEmail, 'BookHub: Refund Processed', emailHtml);
+    
+    res.json({ message: 'Refund processed successfully', refundId: refundData.id });
+  } catch (err) {
+    console.error('Refund Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/payments/:paymentId/refund-status', verifyToken, async (req, res) => {
+  const { paymentId } = req.params;
+  
+  try {
+    const result = await client.query('SELECT payment_status FROM payments WHERE id = $1 AND user_id = $2', [paymentId, req.userId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Payment not found' });
+    
+    res.json({ status: result.rows[0].payment_status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ADMIN PANEL ENDPOINTS
