@@ -64,7 +64,7 @@ async function initDB() {
     await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, reset_token VARCHAR(255), reset_token_expires TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     console.log('✓ Users table created');
     
-    await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, country VARCHAR(100), city VARCHAR(100), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`;
     console.log('✓ Services table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS cities (id UUID PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE, country VARCHAR(100) NOT NULL, region VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8))`);
@@ -617,6 +617,34 @@ app.get('/services', async (req, res) => {
   try {
     const result = await client.query('SELECT * FROM services ORDER BY category, name');
     res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/services-by-location', async (req, res) => {
+  const { country, city } = req.query;
+  
+  try {
+    if (!country || !city) {
+      // Return all services if no location specified
+      const result = await client.query('SELECT * FROM services ORDER BY category, name');
+      return res.json(result.rows);
+    }
+    
+    // Try to get services specific to this location
+    const locationResult = await client.query(
+      'SELECT * FROM services WHERE (country = $1 OR country IS NULL) AND (city = $2 OR city IS NULL) ORDER BY category, name',
+      [country, city]
+    );
+    
+    if (locationResult.rows.length > 0) {
+      return res.json(locationResult.rows);
+    }
+    
+    // If no location-specific services, return all services
+    const allResult = await client.query('SELECT * FROM services ORDER BY category, name');
+    res.json(allResult.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

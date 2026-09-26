@@ -90,7 +90,7 @@
           </div>
           <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
             <label style="color: white; font-weight: bold; margin-bottom: 8px; display: block;">🏙️ City</label>
-            <select id="city" required style="color: #333;"><option>Select city</option></select>
+            <select id="city" required onchange="loadServicesByLocation(document.getElementById('country').value, this.value)" style="color: #333;"><option>Select city</option></select>
           </div>
         </div>
 
@@ -357,9 +357,27 @@
         filteredCities.forEach(c => {
           selectOptions += `<option value="${c.name}">${c.name}</option>`;
         });
+        loadServicesByLocation(selectedCountry, '');
       }
       
       citySelect.innerHTML = selectOptions;
+    }
+    
+    async function loadServicesByLocation(country, city) {
+      try {
+        const url = city ? `${API}/services-by-location?country=${country}&city=${city}` : `${API}/services-by-location?country=${country}`;
+        const res = await fetch(url);
+        const services = await res.json();
+        const serviceSelect = document.getElementById('service');
+        
+        let selectOptions = '<option>Select a service</option>';
+        services.forEach(s => {
+          selectOptions += `<option value="${s.id}">${s.name} - $${s.price}</option>`;
+        });
+        serviceSelect.innerHTML = selectOptions;
+      } catch (err) {
+        console.error('Error loading services:', err);
+      }
     }
 
     async function loadServices() {
