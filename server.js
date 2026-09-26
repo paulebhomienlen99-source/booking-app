@@ -640,7 +640,7 @@ app.get('/subscription-plans', (req, res) => {
 });
 
 app.post('/subscription/upgrade', verifyToken, async (req, res) => {
-  const { plan, paypalOrderId } = req.body;
+  const { plan } = req.body;
   try {
     if (!['pro', 'premium'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
     
@@ -655,13 +655,13 @@ app.post('/subscription/upgrade', verifyToken, async (req, res) => {
     
     if (result.rows.length === 0) {
       await client.query(
-        'INSERT INTO subscriptions (id, user_id, plan, booking_limit, monthly_bookings) VALUES ($1, $2, $3, $4, $5)',
-        [uuidv4(), req.userId, plan, planLimits[plan], 0]
+        'INSERT INTO subscriptions (id, user_id, plan, booking_limit, monthly_bookings, renewal_price, auto_renew) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [uuidv4(), req.userId, plan, planLimits[plan], 0, planPrices[plan], true]
       );
     } else {
       await client.query(
-        'UPDATE subscriptions SET plan = $1, booking_limit = $2, monthly_bookings = 0 WHERE user_id = $3',
-        [plan, planLimits[plan], req.userId]
+        'UPDATE subscriptions SET plan = $1, booking_limit = $2, monthly_bookings = 0, renewal_price = $3, auto_renew = $4 WHERE user_id = $5',
+        [plan, planLimits[plan], planPrices[plan], true, req.userId]
       );
     }
     
@@ -676,39 +676,6 @@ app.post('/subscription/upgrade', verifyToken, async (req, res) => {
     await sendEmail(userEmail, `BookHub: Upgraded to ${plan} plan`, emailHtml);
     
     res.json({ message: `Upgraded to ${plan} plan!`, plan, bookingLimit: planLimits[plan] });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-        'INSERT INTO subscriptions (id, user_id, plan, booking_limit, renewal_price, auto_renew) VALUES ($1, $2, $3, $4, $5, $6)',
-        [uuidv4(), req.userId, plan, planLimits[plan], planPrices[plan], true]
-      );
-    } else {
-      await client.query(
-        'UPDATE subscriptions SET plan = $1, booking_limit = $2, monthly_bookings = 0, renewal_price = $3, auto_renew = $4 WHERE user_id = $5',
-        [plan, planLimits[plan], planPrices[plan], true, req.userId]
-      );
-    }
-    
-    // Get user email for confirmation
-    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [req.userId]);
-    const userEmail = userRes.rows[0].email;
-    
-    // Send upgrade confirmation email
-    const emailHtml = `
-      <h2>Subscription Upgraded!</h2>
-      <p>Your subscription has been upgraded to <strong>${plan.toUpperCase()}</strong> plan.</p>
-      <p><strong>Plan Details:</strong></p>
-      <ul>
-        <li>Monthly Bookings: ${planLimits[plan]}</li>
-        <li>Price: $${planPrices[plan]}/month</li>
-        <li>Auto-Renewal: Enabled</li>
-      </ul>
-      <p>Thank you for choosing BookHub!</p>
-    `;
-    await sendEmail(userEmail, 'Subscription Upgraded', emailHtml);
-    
-    res.json({ message: `Upgraded to ${plan} plan!`, plan, booking_limit: planLimits[plan] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
