@@ -69,6 +69,10 @@
     </header>
 
     <div class="container">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">📊 Dashboard Stats</h2>
+        <button onclick="loadAdminData()" style="background: #667eea; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">🔄 Refresh</button>
+      </div>
       <div class="stats" id="statsContainer"></div>
 
       <div class="nav-tabs">
@@ -141,6 +145,11 @@
     function showDashboard() {
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('dashboardSection').classList.add('active');
+      
+      // Auto-refresh stats every 5 seconds
+      setInterval(() => {
+        loadDashboard();
+      }, 5000);
     }
 
     function adminLogout() {
@@ -151,11 +160,24 @@
     }
 
     async function loadAdminData() {
-      loadDashboard();
-      loadUsers();
-      loadBookings();
-      loadPayments();
-      loadSubscriptions();
+      const refreshBtn = event?.target;
+      if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = '⏳ Loading...';
+      }
+      
+      await Promise.all([
+        loadDashboard(),
+        loadUsers(),
+        loadBookings(),
+        loadPayments(),
+        loadSubscriptions()
+      ]);
+      
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '🔄 Refresh';
+      }
     }
 
     async function loadDashboard() {
