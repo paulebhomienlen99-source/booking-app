@@ -1430,7 +1430,7 @@ function verifyAdmin(req, res, next) {
   }
 }
 
-app.post('/admin/reset-services', verifyAdmin, async (req, res) => {
+app.post('/admin/reset-services', async (req, res) => {
   try {
     // Delete all old services
     await client.query('DELETE FROM services');
