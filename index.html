@@ -524,8 +524,15 @@
         const totalBookings = earnings.total_bookings || 0;
         const baseRevenue = totalCommission / 0.20;
         
+        // Load user's own stats
+        const userStatsRes = await fetch(`${API}/user-stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const userStats = await userStatsRes.json();
+        const userTotalBookings = userStats.total_bookings || 0;
+        
         document.getElementById('totalEarnings').textContent = `$${totalCommission.toFixed(2)}`;
-        document.getElementById('totalBookings').textContent = totalBookings;
+        document.getElementById('totalBookings').textContent = userTotalBookings;
         document.getElementById('baseRevenue').textContent = `$${baseRevenue.toFixed(2)}`;
         document.getElementById('commissionRevenue').textContent = `$${totalCommission.toFixed(2)}`;
         document.getElementById('totalRevenue').textContent = `$${(baseRevenue + totalCommission).toFixed(2)}`;

@@ -730,6 +730,33 @@ app.get('/earnings', async (req, res) => {
   }
 });
 
+app.get('/user-stats', verifyToken, async (req, res) => {
+  try {
+    // Get user's total bookings
+    const bookingsResult = await client.query(
+      'SELECT COUNT(*) as total_bookings FROM bookings WHERE user_id = $1',
+      [req.userId]
+    );
+    
+    // Get user's total revenue from completed bookings
+    const revenueResult = await client.query(
+      'SELECT COALESCE(SUM(p.total_paid), 0) as total_revenue FROM payments p WHERE p.user_id = $1 AND p.payment_status = $2',
+      [req.userId, 'completed']
+    );
+    
+    const totalBookings = parseInt(bookingsResult.rows[0].total_bookings) || 0;
+    const totalRevenue = parseFloat(revenueResult.rows[0].total_revenue) || 0;
+    
+    res.json({
+      total_bookings: totalBookings,
+      total_revenue: totalRevenue,
+      all_time_bookings: totalBookings
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/payment-history', verifyToken, async (req, res) => {
   try {
     const result = await client.query(`
