@@ -83,13 +83,13 @@ async function initDB() {
     console.log('✓ Bookings table created');
     
     // Insert services
-    await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price) VALUES 
-      ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'salon', 30, 25.00),
-      ('550e8400-e29b-41d4-a716-446655440002', 'Massage', 'Relaxing full-body massage', 'salon', 60, 80.00),
-      ('550e8400-e29b-41d4-a716-446655440003', 'Consultation', 'One-on-one consultation', 'salon', 45, 50.00),
-      ('550e8400-e29b-41d4-a716-446655440004', 'Italian Restaurant', 'Fine dining Italian cuisine', 'restaurant', 120, 65.00),
-      ('550e8400-e29b-41d4-a716-446655440005', 'Sushi Bar', 'Fresh Japanese sushi experience', 'restaurant', 90, 55.00),
-      ('550e8400-e29b-41d4-a716-446655440006', 'Burger Joint', 'Casual burger and fries', 'restaurant', 60, 20.00),
+    await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES 
+      ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'beauty', 30, 25.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440002', 'Massage Therapy', 'Relaxing full-body massage', 'wellness', 60, 80.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440003', 'Hair Styling', 'Professional hair styling', 'beauty', 45, 50.00, 'Italy', 'Florence'),
+      ('550e8400-e29b-41d4-a716-446655440100', 'Pizza Delivery', 'Authentic Italian pizza delivery', 'food', 30, 15.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440101', 'Pasta Making Class', 'Learn traditional pasta making', 'food', 120, 45.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440102', 'Wine Tasting Tour', 'Tuscan wine tasting experience', 'tour', 180, 75.00, 'Italy', 'Florence'),
       ('550e8400-e29b-41d4-a716-446655440007', 'City Taxi', 'Economy taxi service', 'taxi', 30, 15.00),
       ('550e8400-e29b-41d4-a716-446655440008', 'Premium Taxi', 'Luxury taxi service', 'taxi', 30, 30.00),
       ('550e8400-e29b-41d4-a716-446655440065', 'Economy Car Rental - Daily', 'Affordable economy car rental', 'carrent', 1440, 45.00),
