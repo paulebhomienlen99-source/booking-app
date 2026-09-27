@@ -1432,9 +1432,11 @@ function verifyAdmin(req, res, next) {
 
 app.post('/admin/reset-services', async (req, res) => {
   try {
-    // Delete all old services
+    // Delete all bookings and payments first (cascade)
+    await client.query('DELETE FROM payments');
+    await client.query('DELETE FROM bookings');
     await client.query('DELETE FROM services');
-    console.log('✓ Old services deleted');
+    console.log('✓ Old services, bookings, and payments deleted');
     
     // Insert new country-specific services
     await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES 
@@ -1495,7 +1497,7 @@ app.post('/admin/reset-services', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+});;
 
 app.get('/admin/dashboard', verifyAdmin, async (req, res) => {
   try {
