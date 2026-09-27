@@ -76,6 +76,19 @@ async function initDB() {
     await client.query(`CREATE TABLE IF NOT EXISTS earnings (id UUID PRIMARY KEY, total_commission DECIMAL(12, 2) DEFAULT 0, total_bookings INT DEFAULT 0, last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS admin_users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     
+    // New tables for enhanced features
+    await client.query(`CREATE TABLE IF NOT EXISTS service_images (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, image_url TEXT NOT NULL, alt_text VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('✓ Service images table created');
+    
+    await client.query(`CREATE TABLE IF NOT EXISTS service_ratings (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5), comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('✓ Service ratings table created');
+    
+    await client.query(`CREATE TABLE IF NOT EXISTS provider_availability (id UUID PRIMARY KEY, provider_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, date DATE NOT NULL, start_time TIME NOT NULL, end_time TIME NOT NULL, is_available BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('✓ Provider availability table created');
+    
+    await client.query(`CREATE TABLE IF NOT EXISTS booking_confirmations (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, email_sent BOOLEAN DEFAULT false, sent_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('✓ Booking confirmations table created');
+    
     // Initialize earnings tracker
     await client.query(`INSERT INTO earnings (id) SELECT '00000000-0000-0000-0000-000000000000' WHERE NOT EXISTS (SELECT 1 FROM earnings)`);
     console.log('✓ Subscriptions, payments, and earnings tables created');
@@ -859,6 +872,145 @@ app.patch('/bookings/:id', verifyToken, async (req, res) => {
   }
 });
 
+// Service Ratings & Reviews
+app.post('/reviews', verifyToken, async (req, res) => {
+  const { service_id, booking_id, rating, review_text } = req.body;
+  try {
+    if (rating < 1 || rating > 5) return res.status(400).json({ error: 'Rating must be 1-5' });
+    
+    const reviewId = uuidv4();
+    await client.query(
+      'INSERT INTO reviews (id, service_id, booking_id, user_id, rating, review_text) VALUES ($1, $2, $3, $4, $5, $6)',
+      [reviewId, service_id, booking_id, req.userId, rating, review_text]
+    );
+    res.json({ message: 'Review added successfully', reviewId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/reviews/:service_id', async (req, res) => {
+  const { service_id } = req.params;
+  try {
+    const result = await client.query(
+      'SELECT r.*, u.name FROM reviews r JOIN users u ON r.user_id = u.id WHERE r.service_id = $1 ORDER BY r.created_at DESC',
+      [service_id]
+    );
+    
+    // Calculate average rating
+    const avgResult = await client.query(
+      'SELECT AVG(rating) as avg_rating, COUNT(*) as total_reviews FROM reviews WHERE service_id = $1',
+      [service_id]
+    );
+    
+    res.json({
+      reviews: result.rows,
+      average_rating: parseFloat(avgResult.rows[0].avg_rating) || 0,
+      total_reviews: parseInt(avgResult.rows[0].total_reviews) || 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Service Availability
+app.patch('/services/:service_id/availability', verifyToken, async (req, res) => {
+  const { service_id } = req.params;
+  const { availability_status, available_count } = req.body;
+  try {
+    await client.query(
+      'UPDATE services SET availability_status = $1, available_count = $2 WHERE id = $3',
+      [availability_status, available_count, service_id]
+    );
+    res.json({ message: 'Availability updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/services/:service_id/availability', async (req, res) => {
+  const { service_id } = req.params;
+  try {
+    const result = await client.query(
+      'SELECT id, name, availability_status, available_count FROM services WHERE id = $1',
+      [service_id]
+    );
+    res.json(result.rows[0] || { error: 'Service not found' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Service Images
+app.post('/services/:service_id/images', verifyToken, async (req, res) => {
+  const { service_id } = req.params;
+  const { image_url, description } = req.body;
+  try {
+    const imageId = uuidv4();
+    await client.query(
+      'INSERT INTO service_images (id, service_id, image_url, description) VALUES ($1, $2, $3, $4)',
+      [imageId, service_id, image_url, description]
+    );
+    res.json({ message: 'Image added', imageId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/services/:service_id/images', async (req, res) => {
+  const { service_id } = req.params;
+  try {
+    const result = await client.query(
+      'SELECT id, image_url, description FROM service_images WHERE service_id = $1 ORDER BY created_at DESC',
+      [service_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Provider Availability Calendar
+app.post('/provider-availability', verifyToken, async (req, res) => {
+  const { available_date, start_time, end_time } = req.body;
+  try {
+    const availId = uuidv4();
+    await client.query(
+      'INSERT INTO provider_availability (id, user_id, available_date, start_time, end_time) VALUES ($1, $2, $3, $4, $5)',
+      [availId, req.userId, available_date, start_time, end_time]
+    );
+    res.json({ message: 'Availability added', availId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/provider-availability/:user_id', async (req, res) => {
+  const { user_id } = req.params;
+  try {
+    const result = await client.query(
+      'SELECT available_date, start_time, end_time FROM provider_availability WHERE user_id = $1 AND available_date >= CURRENT_DATE ORDER BY available_date, start_time',
+      [user_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/provider-availability/:avail_id', verifyToken, async (req, res) => {
+  const { avail_id } = req.params;
+  try {
+    await client.query(
+      'DELETE FROM provider_availability WHERE id = $1 AND user_id = $2',
+      [avail_id, req.userId]
+    );
+    res.json({ message: 'Availability deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/bookings/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -1494,7 +1646,38 @@ app.post('/admin/reset-services', async (req, res) => {
       ('550e8400-e29b-41d4-a716-446655440310', 'Electrical Work', 'Licensed electrician services', 'freelance', 120, 110.00, 'USA', 'New York'),
       ('550e8400-e29b-41d4-a716-446655440311', 'House Painting', 'Professional painting service', 'freelance', 240, 180.00, 'Italy', 'Milan'),
       ('550e8400-e29b-41d4-a716-446655440312', 'Business Consulting', 'Strategic business advice', 'freelance', 60, 90.00, 'USA', 'San Francisco'),
-      ('550e8400-e29b-41d4-a716-446655440313', 'Resume Writing', 'Professional resume service', 'freelance', 90, 60.00, 'USA', 'New York')
+      ('550e8400-e29b-41d4-a716-446655440313', 'Resume Writing', 'Professional resume service', 'freelance', 90, 60.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440400', 'Boulangerie Pastries', 'Fresh French pastries delivery', 'food', 30, 12.00, 'France', 'Paris'),
+      ('550e8400-e29b-41d4-a716-446655440401', 'French Cooking Class', 'Learn classic French cuisine', 'food', 180, 85.00, 'France', 'Lyon'),
+      ('550e8400-e29b-41d4-a716-446655440402', 'Wine Tasting - Bordeaux', 'Premium Bordeaux wine tasting', 'tour', 120, 95.00, 'France', 'Bordeaux'),
+      ('550e8400-e29b-41d4-a716-446655440403', 'Eiffel Tower Tour', 'Guided Eiffel Tower experience', 'tour', 180, 120.00, 'France', 'Paris'),
+      ('550e8400-e29b-41d4-a716-446655440404', 'Louvre Museum Tour', 'Private museum tour guide', 'tour', 240, 150.00, 'France', 'Paris'),
+      ('550e8400-e29b-41d4-a716-446655440405', 'French Massage - 1 Hour', 'Relaxing therapeutic massage', 'wellness', 60, 90.00, 'France', 'Paris'),
+      ('550e8400-e29b-41d4-a716-446655440406', 'Luxury Car Rental', 'Premium car rental service', 'carrent', 1440, 120.00, 'France', 'Paris'),
+      ('550e8400-e29b-41d4-a716-446655440407', 'Paris Taxi Service', 'Reliable taxi service', 'taxi', 30, 20.00, 'France', 'Paris'),
+      ('550e8400-e29b-41d4-a716-446655440500', 'Bavarian Beer Tour', 'Munich brewery tour', 'tour', 240, 65.00, 'Germany', 'Munich'),
+      ('550e8400-e29b-41d4-a716-446655440501', 'German Schnitzel Class', 'Traditional schnitzel cooking', 'food', 120, 55.00, 'Germany', 'Berlin'),
+      ('550e8400-e29b-41d4-a716-446655440502', 'Bavarian Dance Class', 'Learn traditional Bavarian dance', 'entertainment', 90, 45.00, 'Germany', 'Munich'),
+      ('550e8400-e29b-41d4-a716-446655440503', 'Berlin Wall Tour', 'Historical Berlin Wall tour', 'tour', 180, 60.00, 'Germany', 'Berlin'),
+      ('550e8400-e29b-41d4-a716-446655440504', 'Spa & Sauna Experience', 'Full spa and sauna day', 'wellness', 180, 120.00, 'Germany', 'Berlin'),
+      ('550e8400-e29b-41d4-a716-446655440505', 'Berlin Nightclub Entry', 'VIP nightclub access', 'entertainment', 480, 85.00, 'Germany', 'Berlin'),
+      ('550e8400-e29b-41d4-a716-446655440506', 'Luxury Hotel - 5 Star', 'Premium luxury accommodation', 'hotel', 1440, 280.00, 'Germany', 'Munich'),
+      ('550e8400-e29b-41d4-a716-446655440600', 'Flamenco Lesson', 'Traditional flamenco dance class', 'entertainment', 90, 50.00, 'Spain', 'Madrid'),
+      ('550e8400-e29b-41d4-a716-446655440601', 'Paella Cooking Class', 'Learn authentic Spanish paella', 'food', 120, 60.00, 'Spain', 'Valencia'),
+      ('550e8400-e29b-41d4-a716-446655440602', 'Sagrada Familia Tour', 'Guided Barcelona cathedral tour', 'tour', 120, 80.00, 'Spain', 'Barcelona'),
+      ('550e8400-e29b-41d4-a716-446655440603', 'Park Güell Tour', 'Guided Gaudí park experience', 'tour', 180, 95.00, 'Spain', 'Barcelona'),
+      ('550e8400-e29b-41d4-a716-446655440604', 'Spanish Guitar Lesson', 'Professional guitar instruction', 'freelance', 60, 55.00, 'Spain', 'Madrid'),
+      ('550e8400-e29b-41d4-a716-446655440605', 'Prado Museum Tour', 'Private art museum tour', 'tour', 180, 100.00, 'Spain', 'Madrid'),
+      ('550e8400-e29b-41d4-a716-446655440606', 'Tapas Food Tour', 'Spanish tapas tasting tour', 'food', 180, 70.00, 'Spain', 'Barcelona'),
+      ('550e8400-e29b-41d4-a716-446655440700', 'London Theatre Show', 'West End theatre tickets', 'entertainment', 180, 140.00, 'United Kingdom', 'London'),
+      ('550e8400-e29b-41d4-a716-446655440701', 'Royal Palace Tour', 'Buckingham Palace guided tour', 'tour', 120, 90.00, 'United Kingdom', 'London'),
+      ('550e8400-e29b-41d4-a716-446655440702', 'Big Ben & Westminster', 'Parliament building tour', 'tour', 90, 70.00, 'United Kingdom', 'London'),
+      ('550e8400-e29b-41d4-a716-446655440703', 'British Tea Experience', 'Afternoon tea service', 'food', 120, 45.00, 'United Kingdom', 'London'),
+      ('550e8400-e29b-41d4-a716-446655440704', 'Fish & Chips Cooking', 'Learn traditional fish & chips', 'food', 90, 40.00, 'United Kingdom', 'Manchester'),
+      ('550e8400-e29b-41d4-a716-446655440705', 'Tower of London Tour', 'Historic tower tour with crown jewels', 'tour', 180, 85.00, 'United Kingdom', 'London'),
+      ('550e8400-e29b-41d4-a716-446655440706', 'Scottish Highlands Tour', 'Breathtaking highlands experience', 'tour', 480, 200.00, 'United Kingdom', 'Edinburgh'),
+      ('550e8400-e29b-41d4-a716-446655440707', 'Double-Decker Bus Tour', 'Iconic London bus tour', 'tour', 120, 35.00, 'United Kingdom', 'London'),
+      ('550e8400-e29b-41d4-a716-446655440708', 'Westminster Abbey Tour', 'Historic abbey guided tour', 'tour', 90, 55.00, 'United Kingdom', 'London')
       ON CONFLICT DO NOTHING`);
     
     res.json({ message: 'Services reset successfully!', count: 50 });
