@@ -235,6 +235,80 @@
       document.getElementById('browseForm').classList.toggle('hidden', tab !== 'browse');
     }
 
+    // Service Details Modal
+    async function showServiceDetails(serviceId, serviceName) {
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.7); display: flex; align-items: center; 
+        justify-content: center; z-index: 1000;
+      `;
+      
+      try {
+        // Fetch reviews and ratings
+        const reviewRes = await fetch(`${API}/reviews/${serviceId}`);
+        const reviewData = await reviewRes.json();
+        
+        const reviewsHTML = reviewData.reviews.map(r => `
+          <div style="border-bottom: 1px solid #ddd; padding: 10px 0;">
+            <strong>${r.name}</strong> - ⭐ ${r.rating}/5
+            <p style="margin: 5px 0; font-size: 0.9em;">${r.review_text}</p>
+          </div>
+        `).join('');
+        
+        modal.innerHTML = `
+          <div style="background: white; border-radius: 15px; padding: 30px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <h2>${serviceName}</h2>
+            <div style="display: flex; gap: 10px; margin: 15px 0;">
+              <span style="background: #667eea; color: white; padding: 5px 10px; border-radius: 5px;">⭐ ${reviewData.average_rating.toFixed(1)}/5</span>
+              <span style="background: #28a745; color: white; padding: 5px 10px; border-radius: 5px;">${reviewData.total_reviews} Reviews</span>
+            </div>
+            <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">⭐ Reviews</h3>
+            <div>${reviewsHTML || '<p>No reviews yet</p>'}</div>
+            <h3 style="color: #667eea; margin-top: 20px; margin-bottom: 10px;">✍️ Leave a Review</h3>
+            <div>
+              <label>Rating (1-5):</label>
+              <input type="number" id="ratingInput" min="1" max="5" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+              <label>Review:</label>
+              <textarea id="reviewInput" placeholder="Share your experience..." style="width: 100%; padding: 8px; margin-bottom: 10px; height: 80px;"></textarea>
+              <button onclick="submitReview('${serviceId}')" style="background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Submit Review</button>
+            </div>
+            <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 20px; background: #ccc; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Close</button>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      } catch (err) {
+        console.error('Error loading service details:', err);
+      }
+    }
+    
+    async function submitReview(serviceId) {
+      const rating = document.getElementById('ratingInput').value;
+      const review_text = document.getElementById('reviewInput').value;
+      
+      if (!rating || !review_text) {
+        alert('Please fill in all fields');
+        return;
+      }
+      
+      try {
+        const res = await fetch(`${API}/reviews`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ service_id: serviceId, rating: parseInt(rating), review_text })
+        });
+        
+        if (res.ok) {
+          alert('Review submitted successfully!');
+          document.querySelector('button').parentElement.parentElement.parentElement.remove();
+        } else {
+          alert('Error submitting review');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      }
+    }
+
     function showAuth() {
       document.getElementById('authSection').classList.remove('hidden');
       document.getElementById('appSection').classList.add('hidden');
@@ -372,9 +446,20 @@
         
         let selectOptions = '<option>Select a service</option>';
         services.forEach(s => {
-          selectOptions += `<option value="${s.id}">${s.name} - $${s.price}</option>`;
+          const availability = s.availability_status === 'available' ? '🟢' : s.availability_status === 'unavailable' ? '🔴' : '🟡';
+          selectOptions += `<option value="${s.id}" title="${s.description}">${availability} ${s.name} - $${s.price}</option>`;
         });
         serviceSelect.innerHTML = selectOptions;
+        
+        // Add click listener to show details
+        serviceSelect.onchange = function() {
+          if (this.value) {
+            const selectedService = services.find(s => s.id === this.value);
+            if (selectedService) {
+              showServiceDetails(selectedService.id, selectedService.name);
+            }
+          }
+        };
       } catch (err) {
         console.error('Error loading services:', err);
       }
