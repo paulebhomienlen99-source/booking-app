@@ -757,9 +757,10 @@ app.get('/orders', verifyToken, async (req, res) => {
       FROM bookings b
       JOIN services s ON b.service_id = s.id
       JOIN users u ON b.user_id = u.id
+      WHERE b.user_id = $1
       ORDER BY b.created_at DESC
       LIMIT 100
-    `);
+    `, [req.userId]);
     const orders = result.rows.map(row => ({
       ...row,
       commission: parseFloat(row.price) * 0.20
