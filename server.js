@@ -1432,12 +1432,16 @@ function verifyAdmin(req, res, next) {
 
 app.post('/admin/reset-services', async (req, res) => {
   try {
+    // Add country and city columns if they don't exist
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS country VARCHAR(100)`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+    console.log('✓ Columns added');
+    
     // Delete all bookings and payments first (cascade)
     await client.query('DELETE FROM payments');
     await client.query('DELETE FROM bookings');
     await client.query('DELETE FROM services');
     console.log('✓ Old services, bookings, and payments deleted');
-    
     // Insert new country-specific services
     await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES 
       ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'beauty', 30, 25.00, 'Italy', 'Rome'),
