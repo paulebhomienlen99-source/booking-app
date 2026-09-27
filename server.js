@@ -1430,6 +1430,73 @@ function verifyAdmin(req, res, next) {
   }
 }
 
+app.post('/admin/reset-services', verifyAdmin, async (req, res) => {
+  try {
+    // Delete all old services
+    await client.query('DELETE FROM services');
+    console.log('✓ Old services deleted');
+    
+    // Insert new country-specific services
+    await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES 
+      ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'beauty', 30, 25.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440002', 'Massage Therapy', 'Relaxing full-body massage', 'wellness', 60, 80.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440003', 'Hair Styling', 'Professional hair styling', 'beauty', 45, 50.00, 'Italy', 'Florence'),
+      ('550e8400-e29b-41d4-a716-446655440100', 'Pizza Delivery', 'Authentic Italian pizza delivery', 'food', 30, 15.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440101', 'Pasta Making Class', 'Learn traditional pasta making', 'food', 120, 45.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440102', 'Wine Tasting Tour', 'Tuscan wine tasting experience', 'tour', 180, 75.00, 'Italy', 'Florence'),
+      ('550e8400-e29b-41d4-a716-446655440103', 'Espresso Masterclass', 'Learn Italian espresso making', 'food', 60, 35.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440104', 'City Taxi', 'Economy taxi service', 'taxi', 30, 15.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440105', 'Premium Taxi', 'Luxury taxi service', 'taxi', 30, 30.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440106', 'Economy Car Rental - Daily', 'Affordable economy car rental', 'carrent', 1440, 45.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440107', 'SUV Rental - Daily', 'Large SUV for family trips', 'carrent', 1440, 85.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440108', '5-Star Hotel', 'Luxury hotel with all amenities', 'hotel', 1440, 250.00, 'Italy', 'Venice'),
+      ('550e8400-e29b-41d4-a716-446655440109', '4-Star Hotel', 'Comfortable hotel with great service', 'hotel', 1440, 150.00, 'Italy', 'Florence'),
+      ('550e8400-e29b-41d4-a716-446655440110', 'Budget Hotel', 'Affordable hotel rooms', 'hotel', 1440, 75.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440111', 'Gym Membership - Monthly', 'Full month gym access', 'fitness', 2880, 45.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440112', 'Personal Training - 1 Hour', 'One-on-one personal training', 'fitness', 60, 70.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440113', 'Yoga Class - 1 Hour', 'Relaxing yoga for all levels', 'fitness', 60, 30.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440114', 'Pizza Making Class', 'Traditional pizza making in Naples', 'food', 120, 55.00, 'Italy', 'Naples'),
+      ('550e8400-e29b-41d4-a716-446655440115', 'Gondola Tour', 'Classic gondola ride in Venice', 'tour', 60, 80.00, 'Italy', 'Venice'),
+      ('550e8400-e29b-41d4-a716-446655440116', 'Art Class', 'Renaissance art appreciation class', 'art', 90, 60.00, 'Italy', 'Florence'),
+      ('550e8400-e29b-41d4-a716-446655440200', 'Haircut', 'Professional haircut service', 'beauty', 30, 28.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440201', 'Spa Treatment', 'Full body spa treatment', 'wellness', 90, 120.00, 'USA', 'Los Angeles'),
+      ('550e8400-e29b-41d4-a716-446655440202', 'Personal Trainer', 'One-on-one fitness session', 'fitness', 60, 80.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440203', 'Yoga Class', 'Hot yoga session', 'fitness', 60, 25.00, 'USA', 'San Francisco'),
+      ('550e8400-e29b-41d4-a716-446655440204', 'Pilates Class', 'Core strengthening pilates', 'fitness', 60, 35.00, 'USA', 'Los Angeles'),
+      ('550e8400-e29b-41d4-a716-446655440205', 'Burger & Fries', 'Gourmet burger delivery', 'food', 30, 18.00, 'USA', 'Chicago'),
+      ('550e8400-e29b-41d4-a716-446655440206', 'Pizza Delivery', 'New York style pizza', 'food', 30, 16.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440207', 'BBQ Catering', 'Authentic BBQ catering service', 'food', 240, 300.00, 'USA', 'Texas'),
+      ('550e8400-e29b-41d4-a716-446655440208', 'Uber/Taxi', 'Ride-sharing service', 'taxi', 20, 12.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440209', 'Car Rental - Daily', 'Daily car rental service', 'carrent', 1440, 50.00, 'USA', 'Los Angeles'),
+      ('550e8400-e29b-41d4-a716-446655440210', 'SUV Rental - Daily', 'Daily SUV rental', 'carrent', 1440, 90.00, 'USA', 'Miami'),
+      ('550e8400-e29b-41d4-a716-446655440211', '5-Star Hotel', 'Luxury 5-star hotel', 'hotel', 1440, 280.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440212', '4-Star Hotel', 'Comfortable 4-star hotel', 'hotel', 1440, 180.00, 'USA', 'Los Angeles'),
+      ('550e8400-e29b-41d4-a716-446655440213', 'Budget Hotel', 'Affordable budget hotel', 'hotel', 1440, 80.00, 'USA', 'Chicago'),
+      ('550e8400-e29b-41d4-a716-446655440214', 'Broadway Show', 'Broadway theater tickets', 'entertainment', 180, 150.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440215', 'Beach Day Tour', 'Guided beach tour and activities', 'tour', 480, 120.00, 'USA', 'Miami'),
+      ('550e8400-e29b-41d4-a716-446655440216', 'Golden Gate Tour', 'San Francisco city tour', 'tour', 240, 95.00, 'USA', 'San Francisco'),
+      ('550e8400-e29b-41d4-a716-446655440300', 'Web Design', 'Professional website design', 'freelance', 480, 180.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440301', 'Logo Design', 'Custom logo design service', 'freelance', 240, 120.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440302', 'Video Editing', 'Professional video editing', 'freelance', 360, 140.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440303', 'Photography Session', 'Professional photo shoot', 'freelance', 120, 180.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440304', 'English Tutoring', 'One-on-one English lessons', 'freelance', 60, 50.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440305', 'Math Tutoring', 'Professional math tutoring', 'freelance', 60, 55.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440306', 'Piano Lessons', 'Professional piano instruction', 'freelance', 60, 60.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440307', 'Guitar Lessons', 'Guitar instruction for all levels', 'freelance', 60, 50.00, 'USA', 'Los Angeles'),
+      ('550e8400-e29b-41d4-a716-446655440308', 'Handyman Service', 'General home repairs', 'freelance', 60, 65.00, 'Italy', 'Rome'),
+      ('550e8400-e29b-41d4-a716-446655440309', 'Plumbing Repair', 'Professional plumbing', 'freelance', 120, 100.00, 'USA', 'Chicago'),
+      ('550e8400-e29b-41d4-a716-446655440310', 'Electrical Work', 'Licensed electrician services', 'freelance', 120, 110.00, 'USA', 'New York'),
+      ('550e8400-e29b-41d4-a716-446655440311', 'House Painting', 'Professional painting service', 'freelance', 240, 180.00, 'Italy', 'Milan'),
+      ('550e8400-e29b-41d4-a716-446655440312', 'Business Consulting', 'Strategic business advice', 'freelance', 60, 90.00, 'USA', 'San Francisco'),
+      ('550e8400-e29b-41d4-a716-446655440313', 'Resume Writing', 'Professional resume service', 'freelance', 90, 60.00, 'USA', 'New York')
+      ON CONFLICT DO NOTHING`);
+    
+    res.json({ message: 'Services reset successfully!', count: 50 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/admin/dashboard', verifyAdmin, async (req, res) => {
   try {
     const totalUsers = await client.query('SELECT COUNT(*) FROM users');
