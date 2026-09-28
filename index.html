@@ -307,14 +307,17 @@
           body: JSON.stringify({ service_id: serviceId, rating: parseInt(rating), review_text })
         });
         
+        const data = await res.json();
         if (res.ok) {
           alert('Review submitted successfully!');
-          document.querySelector('button').parentElement.parentElement.parentElement.remove();
+          document.getElementById('serviceModal').remove();
         } else {
-          alert('Error submitting review');
+          alert('Error: ' + (data.error || 'Failed to submit review. Please try again.'));
+          console.error('Review error:', data);
         }
       } catch (err) {
-        console.error('Error:', err);
+        alert('Error: ' + err.message);
+        console.error('Review submission error:', err);
       }
     }
     

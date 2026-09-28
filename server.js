@@ -260,6 +260,9 @@ async function initDB() {
     await client.query(`CREATE TABLE IF NOT EXISTS booking_confirmations (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, email_sent BOOLEAN DEFAULT false, sent_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     console.log('✓ Booking confirmations table created');
     
+        await client.query(`CREATE TABLE IF NOT EXISTS reviews (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, booking_id UUID REFERENCES bookings(id) ON DELETE SET NULL, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5), review_text TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('Reviews table created');
+    
     // Initialize earnings tracker
     await client.query(`INSERT INTO earnings (id) SELECT '00000000-0000-0000-0000-000000000000' WHERE NOT EXISTS (SELECT 1 FROM earnings)`);
     console.log('✓ Subscriptions, payments, and earnings tables created');
