@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const paypal = require('@paypal/checkout-server-sdk');
 const nodemailer = require('nodemailer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const twilio = require('twilio');
 require('dotenv').config();
 
 const app = express();
@@ -15,12 +16,123 @@ app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
 
+// Twilio Configuration for SMS
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
+
 // Email Configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  }
+});
+
+// Provider Profile Endpoints
+app.post('/provider/register', verifyToken, async (req, res) => {
+  try {
+    const { bio, phone } = req.body;
+    await client.query(
+      'UPDATE users SET is_provider = true, bio = $1, phone = $2 WHERE id = $3',
+      [bio, phone, req.userId]
+    );
+    res.json({ message: 'Provider profile created successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/provider/:provider_id', async (req, res) => {
+  try {
+    const result = await client.query(
+      'SELECT id, name, bio, phone, profile_image, rating, total_reviews FROM users WHERE id = $1 AND is_provider = true',
+      [req.params.provider_id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Provider not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/provider/profile', verifyToken, async (req, res) => {
+  try {
+    const { bio, phone, profile_image } = req.body;
+    await client.query(
+      'UPDATE users SET bio = $1, phone = $2, profile_image = $3 WHERE id = $4',
+      [bio, phone, profile_image, req.userId]
+    );
+    res.json({ message: 'Profile updated' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Notifications
+app.get('/notifications', verifyToken, async (req, res) => {
+  try {
+    const result = await client.query(
+      'SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
+      [req.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/notifications', verifyToken, async (req, res) => {
+  try {
+    const { type, title, message } = req.body;
+    const notifId = uuidv4();
+    await client.query(
+      'INSERT INTO notifications (id, user_id, type, title, message) VALUES ($1, $2, $3, $4, $5)',
+      [notifId, req.userId, type, title, message]
+    );
+    res.json({ message: 'Notification created', notifId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/notifications/:notif_id/read', verifyToken, async (req, res) => {
+  try {
+    await client.query(
+      'UPDATE notifications SET read = true WHERE id = $1 AND user_id = $2',
+      [req.params.notif_id, req.userId]
+    );
+    res.json({ message: 'Notification marked as read' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Booking Calendar
+app.post('/booking-events', verifyToken, async (req, res) => {
+  try {
+    const { booking_id, event_date, event_time, event_type } = req.body;
+    const eventId = uuidv4();
+    await client.query(
+      'INSERT INTO booking_events (id, booking_id, event_date, event_time, event_type) VALUES ($1, $2, $3, $4, $5)',
+      [eventId, booking_id, event_date, event_time, event_type]
+    );
+    res.json({ message: 'Event created', eventId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/booking-events/:booking_id', verifyToken, async (req, res) => {
+  try {
+    const result = await client.query(
+      'SELECT * FROM booking_events WHERE booking_id = $1 ORDER BY event_date, event_time',
+      [req.params.booking_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -40,14 +152,67 @@ async function sendEmail(to, subject, htmlContent) {
     return false;
   }
 }
+
+async function sendSMS(phoneNumber, message) {
+  if (!twilioClient || !process.env.TWILIO_PHONE_NUMBER) {
+    console.log('SMS not configured, skipping SMS');
+    return false;
+  }
+  
+  try {
+    await twilioClient.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: phoneNumber
+    });
+    console.log(`SMS sent to ${phoneNumber}`);
+    return true;
+  } catch (err) {
+    console.error('SMS error:', err.message);
+    return false;
+  }
+}
+
+async function sendNotification(userId, type, title, message) {
+  try {
+    // Save to DB
+    await client.query(
+      'INSERT INTO notifications (id, user_id, type, title, message) VALUES ($1, $2, $3, $4, $5)',
+      [uuidv4(), userId, type, title, message]
+    );
+    
+    // Get user details for email/SMS
+    const userRes = await client.query('SELECT email, phone FROM users WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0) return;
+    
+    const user = userRes.rows[0];
+    
+    // Send email notification
+    if (user.email) {
+      await sendEmail(user.email, title, `<p>${message}</p>`);
+    }
+    
+    // Send SMS notification if phone available
+    if (user.phone) {
+      await sendSMS(user.phone, `${title}: ${message}`);
+    }
+  } catch (err) {
+    console.error('Notification error:', err.message);
+  }
+}
+
 let paypalClient;
 if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
   
-  const environment = new paypal.core.SandboxEnvironment(clientId, clientSecret);
+  // Use LiveEnvironment for production, SandboxEnvironment for development
+  const environment = process.env.NODE_ENV === 'production'
+    ? new paypal.core.LiveEnvironment(clientId, clientSecret)
+    : new paypal.core.SandboxEnvironment(clientId, clientSecret);
+  
   paypalClient = new paypal.core.PayPalHttpClient(environment);
-  console.log('✓ PayPal client initialized');
+  console.log(`✓ PayPal client initialized (${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'SANDBOX'})`);
 }
 
 const client = new Client({
@@ -61,11 +226,17 @@ async function initDB() {
   try {
     console.log('Starting database initialization...');
     
-    await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, reset_token VARCHAR(255), reset_token_expires TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Users table created');
+    await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, phone VARCHAR(20), bio TEXT, profile_image VARCHAR(500), rating DECIMAL(3,2) DEFAULT 0, total_reviews INT DEFAULT 0, is_provider BOOLEAN DEFAULT false, reset_token VARCHAR(255), reset_token_expires TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('✓ Users table created with provider fields');
     
-    await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, country VARCHAR(100), city VARCHAR(100), availability_status VARCHAR(50) DEFAULT 'available', available_count INT DEFAULT 999, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Services table created');
+    await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, provider_id UUID REFERENCES users(id), name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, country VARCHAR(100), city VARCHAR(100), availability_status VARCHAR(50) DEFAULT 'available', available_count INT DEFAULT 999, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('✓ Services table created with provider_id');
+    
+    await client.query(`CREATE TABLE IF NOT EXISTS notifications (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), type VARCHAR(50), title VARCHAR(255), message TEXT, read BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    console.log('✓ Notifications table created');
+    
+    await client.query(`CREATE TABLE IF NOT EXISTS booking_events (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id), event_date DATE NOT NULL, event_time TIME NOT NULL, event_type VARCHAR(50), reminder_sent BOOLEAN DEFAULT false)`);
+    console.log('✓ Booking events table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS cities (id UUID PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE, country VARCHAR(100) NOT NULL, region VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8))`);
     console.log('✓ Cities table created');
@@ -1031,8 +1202,11 @@ app.post('/payments/paypal/create-order', verifyToken, async (req, res) => {
   
   try {
     const auth = Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64');
+    const baseURL = process.env.NODE_ENV === 'production' 
+      ? 'https://api.paypal.com/v2/checkout/orders'
+      : 'https://api.sandbox.paypal.com/v2/checkout/orders';
     
-    const response = await fetch('https://api.sandbox.paypal.com/v2/checkout/orders', {
+    const response = await fetch(baseURL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1077,8 +1251,11 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
   
   try {
     const auth = Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64');
+    const baseURL = process.env.NODE_ENV === 'production'
+      ? `https://api.paypal.com/v2/checkout/orders/${order_id}/capture`
+      : `https://api.sandbox.paypal.com/v2/checkout/orders/${order_id}/capture`;
     
-    const response = await fetch(`https://api.sandbox.paypal.com/v2/checkout/orders/${order_id}/capture`, {
+    const response = await fetch(baseURL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1142,6 +1319,14 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
         `;
         
         await sendEmail(booking.email, 'Payment Receipt - BookHub Booking', emailHTML);
+        
+        // Send booking confirmation notification
+        await sendNotification(
+          req.userId,
+          'booking_confirmed',
+          '🎉 Booking Confirmed!',
+          `Your booking for ${booking.service_name} on ${booking.booking_date} has been confirmed. Payment successful!`
+        );
       }
       
       res.json({ status: 'COMPLETED', message: 'Payment captured successfully' });
