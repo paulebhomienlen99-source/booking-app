@@ -466,13 +466,37 @@
         const serviceSelect = document.getElementById('service');
         
         let selectOptions = '<option>Select a service</option>';
-        services.forEach(s => {
-          const availability = s.availability_status === 'available' ? '🟢' : s.availability_status === 'unavailable' ? '🔴' : '🟡';
-          selectOptions += `<option value="${s.id}" title="${s.description}">${availability} ${s.name} - $${s.price}</option>`;
-        });
+        if (services && services.length > 0) {
+          services.forEach(s => {
+            const availability = s.availability_status === 'available' ? '🟢' : s.availability_status === 'unavailable' ? '🔴' : '🟡';
+            selectOptions += `<option value="${s.id}" title="${s.description}">${availability} ${s.name} - $${s.price}</option>`;
+          });
+        } else {
+          // If no services found, load all services as fallback
+          const allRes = await fetch(`${API}/services`);
+          const allServices = await allRes.json();
+          allServices.forEach(s => {
+            selectOptions += `<option value="${s.id}" title="${s.description}">📦 ${s.name} - $${s.price}</option>`;
+          });
+        }
         serviceSelect.innerHTML = selectOptions;
+        serviceSelect.style.display = 'block'; // Make sure it's visible
       } catch (err) {
         console.error('Error loading services:', err);
+        // Load all services as fallback on error
+        try {
+          const res = await fetch(`${API}/services`);
+          const services = await res.json();
+          const serviceSelect = document.getElementById('service');
+          let selectOptions = '<option>Select a service</option>';
+          services.forEach(s => {
+            selectOptions += `<option value="${s.id}">${s.name} - $${s.price}</option>`;
+          });
+          serviceSelect.innerHTML = selectOptions;
+          serviceSelect.style.display = 'block';
+        } catch (e) {
+          console.error('Fallback error:', e);
+        }
       }
     }
 
