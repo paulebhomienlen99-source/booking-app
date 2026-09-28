@@ -1977,3 +1977,4 @@ app.listen(PORT, () => {
 });
 
 client.on('error', (err) => console.error('Database error:', err));
+
