@@ -757,7 +757,7 @@ app.post('/auth/signup', async (req, res) => {
     const userId = uuidv4();
     await client.query('INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, $4)', [userId, email, hashedPassword, name]);
     const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token, name, message: 'Signup successful' });
+    res.json({ token, name, message: 'Signup successful', firstTime: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

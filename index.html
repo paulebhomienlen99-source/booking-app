@@ -411,6 +411,7 @@
         localStorage.setItem('token', token);
         localStorage.setItem('userName', userName);
         localStorage.setItem('userEmail', email);
+        if (data.firstTime) showWelcomeModal(name);
         showApp();
       } catch (err) {
         errorDiv.textContent = 'Error: ' + err.message;
@@ -418,6 +419,31 @@
       }
     }
 
+    function showWelcomeModal(userName) {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1001;';
+      modal.innerHTML = `
+        <div style="background: white; border-radius: 15px; padding: 40px; max-width: 500px; text-align: center; animation: slideIn 0.5s ease;">
+          <div style="font-size: 3em; margin-bottom: 20px;">🎉</div>
+          <h2 style="color: #667eea; margin-bottom: 15px;">Welcome to BookHub, ${userName}!</h2>
+          <p style="color: #666; font-size: 1.1em; margin-bottom: 20px; line-height: 1.6;">
+            You're all set! Start exploring amazing services in your city. Browse, book, and enjoy premium experiences.
+          </p>
+          <div style="background: #f0f4ff; padding: 15px; border-radius: 10px; margin-bottom: 25px;">
+            <p style="color: #667eea; font-weight: bold; margin: 0;">✨ Quick Tips:</p>
+            <ul style="color: #666; text-align: left; margin: 10px 0 0 0; padding: 0 0 0 20px;">
+              <li>Select your country and city to filter services</li>
+              <li>Click on any service to see reviews and details</li>
+              <li>Book your first service to get started!</li>
+            </ul>
+          </div>
+          <button onclick="this.closest('div').parentElement.remove()" style="background: #667eea; color: white; border: none; padding: 12px 30px; font-size: 1em; border-radius: 5px; cursor: pointer; font-weight: bold;">Let's Explore! 🚀</button>
+        </div>
+        <style>@keyframes slideIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }</style>
+      `;
+      document.body.appendChild(modal);
+    }
+    
     function logout() {
       localStorage.removeItem('token');
       localStorage.removeItem('userName');
