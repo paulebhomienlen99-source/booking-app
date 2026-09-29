@@ -758,6 +758,7 @@ app.post('/auth/signup', async (req, res) => {
     await client.query('INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, $4)', [userId, email, hashedPassword, name]);
     const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: '24h' });
     res.json({ token, name, message: 'Signup successful', firstTime: true });
+    await sendEmail(email, 'Welcome to BookHub!', `<h2 style="color: #667eea;">Welcome to BookHub, ${name}!</h2><p>Your account created successfully. Explore amazing services in your city!</p>`).catch(err => console.error('Email error:', err));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
