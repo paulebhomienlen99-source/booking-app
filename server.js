@@ -833,7 +833,7 @@ app.get('/services-by-location', async (req, res) => {
     
     // Try to get services specific to this location
     const locationResult = await client.query(
-      'SELECT * FROM services WHERE (country = $1 OR country IS NULL) AND (city = $2 OR city IS NULL) ORDER BY category, name',
+      'SELECT * FROM services WHERE country = $1 AND city = $2 ORDER BY category, name',
       [country, city]
     );
     
