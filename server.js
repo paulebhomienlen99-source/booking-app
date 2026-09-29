@@ -1992,3 +1992,6 @@ app.listen(PORT, () => {
 
 client.on('error', (err) => console.error('Database error:', err));
 
+
+app.post('/withdrawals/request', async (req, res) => { const {amount, paypal_email} = req.body; if (!amount || amount <= 0) return res.status(400).json({error: 'Invalid amount'}); res.json({message: 'Withdrawal request submitted', amount, status: 'pending'}); });
+app.get('/withdrawals/history', async (req, res) => { res.json([]); });
