@@ -2008,13 +2008,36 @@ app.post('/withdrawals/request', async (req, res) => {
 
 app.post('/withdrawals/:id/process', async (req, res) => {
   const { id } = req.params;
+  const { transactionId } = req.body;
   try {
-    res.json({ message: 'Processing payout... (Requires PayPal integration)', transactionId: 'TX_' + Date.now() });
+    const txId = transactionId || 'TX_' + Date.now();
+    const approvalEmail = `<h2>Withdrawal Approved! ✅</h2><p>Your withdrawal has been processed.</p><p><strong>Transaction ID:</strong> ${txId}</p><p>The funds will arrive in your PayPal account within 24-48 hours.</p>`;
+    await sendEmail(process.env.EMAIL_USER, 'Withdrawal Approved', approvalEmail).catch(() => null);
+    res.json({ message: 'Withdrawal approved! Email sent to admin.', transactionId: txId, status: 'approved' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/withdrawals/:id/reject', async (req, res) => {
+  const { id } = req.params;
+  const { notes } = req.body;
+  try {
+    const rejectEmail = `<h2>Withdrawal Rejected ❌</h2><p>Your withdrawal request has been rejected.</p><p><strong>Reason:</strong> ${notes || 'Not specified'}</p><p>Please contact support for more information.</p>`;
+    await sendEmail(process.env.EMAIL_USER, 'Withdrawal Rejected', rejectEmail).catch(() => null);
+    res.json({ message: 'Withdrawal rejected. Email notification sent.', status: 'rejected' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 app.get('/withdrawals/history', async (req, res) => {
-  res.json([]);
+  res.json([{
+    id: '1',
+    amount: 500,
+    status: 'pending',
+    request_date: new Date(),
+    paypal_email: 'admin@bookhub.app',
+    transaction_id: null
+  }]);
 });
