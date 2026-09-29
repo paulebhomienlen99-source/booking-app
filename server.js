@@ -347,16 +347,16 @@ async function initDB() {
       ('550e8400-e29b-41d4-a716-446655440062', 'Business Consulting - 1 Hour', 'Strategic business advice and planning', 'marketplace', 60, 75.00),
       ('550e8400-e29b-41d4-a716-446655440063', 'Resume Writing Service', 'Professional resume and cover letter', 'marketplace', 90, 50.00),
       ('550e8400-e29b-41d4-a716-446655440064', 'Interview Coaching - 1 Hour', 'Job interview preparation and coaching', 'marketplace', 60, 55.00),
-      ('550e8400-e29b-41d4-a716-446655440100', 'Tagliatelle al Ragù Cooking Class', 'Learn to make traditional Bolognese pasta', 'food', 120, 85.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440101', 'Tortellini Making Workshop', 'Master the art of handmade tortellini', 'food', 120, 80.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440102', 'Mortadella Tasting Tour', 'Taste authentic Bolognese mortadella', 'food', 90, 65.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440103', 'Balsamic Vinegar Tour', 'Visit traditional balsamic vinegar makers', 'tour', 180, 95.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440104', 'Medieval Bologna Walking Tour', 'Guided tour of historic Bologna', 'tour', 180, 75.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440105', 'Parmesan Cheese Factory Tour', 'Visit nearby Parmesan cheese production', 'tour', 240, 110.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440106', 'Italian Wine Tasting', 'Local Emilia wine tasting experience', 'beverage', 120, 70.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440107', 'Pasta Art Workshop', 'Learn pasta shaping and decoration', 'art', 90, 60.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440108', 'Traditional Pizza Oven Cooking', 'Learn to cook pizza in wood-fired ovens', 'food', 120, 75.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440109', 'Gelato & Chocolate Making', 'Create your own gelato and chocolate', 'food', 90, 70.00, 'Italy', 'Bologna')
+      ('550e8400-e29b-41d4-a716-446655440500', 'Tagliatelle al Ragù Cooking Class', 'Learn to make traditional Bolognese pasta', 'food', 120, 85.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440501', 'Tortellini Making Workshop', 'Master the art of handmade tortellini', 'food', 120, 80.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440502', 'Mortadella Tasting Tour', 'Taste authentic Bolognese mortadella', 'food', 90, 65.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440503', 'Balsamic Vinegar Tour', 'Visit traditional balsamic vinegar makers', 'tour', 180, 95.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440504', 'Medieval Bologna Walking Tour', 'Guided tour of historic Bologna', 'tour', 180, 75.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440505', 'Parmesan Cheese Factory Tour', 'Visit nearby Parmesan cheese production', 'tour', 240, 110.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440506', 'Italian Wine Tasting', 'Local Emilia wine tasting experience', 'beverage', 120, 70.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440507', 'Pasta Art Workshop', 'Learn pasta shaping and decoration', 'art', 90, 60.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440508', 'Traditional Pizza Oven Cooking', 'Learn to cook pizza in wood-fired ovens', 'food', 120, 75.00, 'Italy', 'Bologna'),
+      ('550e8400-e29b-41d4-a716-446655440509', 'Gelato & Chocolate Making', 'Create your own gelato and chocolate', 'food', 90, 70.00, 'Italy', 'Bologna')
       ON CONFLICT DO NOTHING`);
     console.log('✓ Services inserted');
     
