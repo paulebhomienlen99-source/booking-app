@@ -401,13 +401,35 @@
       try {
         const res = await fetch(`${API}/withdrawals/history`);
         const withdrawals = await res.json();
-        let html = '<table><tr><th>Date</th><th>Amount</th><th>PayPal</th><th>Status</th></tr>';
+        let html = '<table><tr><th>Date</th><th>Amount</th><th>PayPal</th><th>Status</th><th>Action</th></tr>';
         withdrawals.forEach(w => {
-          html += `<tr><td>${new Date(w.request_date).toLocaleDateString()}</td><td>$${w.amount.toFixed(2)}</td><td>${w.paypal_email}</td><td><span class="status ${w.status}">${w.status}</span></td></tr>`;
+          const actions = w.status === 'pending' ? `<button onclick="processWithdrawal('${w.id}', '${w.paypal_email}', ${w.amount})" style="background:#28a745;color:white;padding:5px 10px;border:none;border-radius:3px;cursor:pointer;margin-right:5px;">✓ Approve</button><button onclick="rejectWithdrawal('${w.id}')" style="background:#dc3545;color:white;padding:5px 10px;border:none;border-radius:3px;cursor:pointer;">✗ Reject</button>` : `<span class="status ${w.status}">${w.status}</span>`;
+          html += `<tr><td>${new Date(w.request_date).toLocaleDateString()}</td><td>$${w.amount.toFixed(2)}</td><td>${w.paypal_email}</td><td><span class="status ${w.status}">${w.status}</span></td><td>${actions}</td></tr>`;
         });
         html += '</table>';
         document.getElementById('withdrawalsTable').innerHTML = html || '<p>No withdrawals yet</p>';
       } catch (err) { console.error(err); }
+    }
+
+    async function processWithdrawal(id, paypalEmail, amount) {
+      if (!confirm(`Process payout of $${amount} to ${paypalEmail}?`)) return;
+      try {
+        const res = await fetch(`${API}/withdrawals/${id}/process`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ transactionId: 'TX_' + Date.now() }) });
+        const data = await res.json();
+        alert(data.message + '. Transaction: ' + data.transactionId);
+        loadWithdrawals();
+      } catch (err) { alert('Error: ' + err.message); }
+    }
+
+    async function rejectWithdrawal(id) {
+      const reason = prompt('Rejection reason:');
+      if (!reason) return;
+      try {
+        const res = await fetch(`${API}/withdrawals/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notes: reason }) });
+        const data = await res.json();
+        alert(data.message);
+        loadWithdrawals();
+      } catch (err) { alert('Error: ' + err.message); }
     }
 
     function switchTab(tab) {

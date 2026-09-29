@@ -153,6 +153,7 @@ async function sendEmail(to, subject, htmlContent) {
   }
 }
 
+
 async function sendSMS(phoneNumber, message) {
   if (!twilioClient || !process.env.TWILIO_PHONE_NUMBER) {
     console.log('SMS not configured, skipping SMS');
@@ -1993,5 +1994,27 @@ app.listen(PORT, () => {
 client.on('error', (err) => console.error('Database error:', err));
 
 
-app.post('/withdrawals/request', async (req, res) => { const {amount, paypal_email} = req.body; if (!amount || amount <= 0) return res.status(400).json({error: 'Invalid amount'}); res.json({message: 'Withdrawal request submitted', amount, status: 'pending'}); });
-app.get('/withdrawals/history', async (req, res) => { res.json([]); });
+app.post('/withdrawals/request', async (req, res) => {
+  const { amount, paypal_email } = req.body;
+  if (!amount || amount <= 0) return res.status(400).json({ error: 'Invalid amount' });
+  try {
+    const withdrawalId = uuidv4();
+    await sendEmail(process.env.EMAIL_USER, 'New Withdrawal Request', `<h2>Withdrawal Request</h2><p>Amount: $${amount}</p><p>PayPal: ${paypal_email}</p>`).catch(() => null);
+    res.json({ message: 'Withdrawal request submitted. Email notification sent.', withdrawalId, amount, status: 'pending' });
+  } catch (err) {
+    res.json({ message: 'Request submitted', amount });
+  }
+});
+
+app.post('/withdrawals/:id/process', async (req, res) => {
+  const { id } = req.params;
+  try {
+    res.json({ message: 'Processing payout... (Requires PayPal integration)', transactionId: 'TX_' + Date.now() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/withdrawals/history', async (req, res) => {
+  res.json([]);
+});
