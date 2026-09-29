@@ -100,11 +100,14 @@
 
       <div id="withdrawals-tab" class="tab-content">
         <h3>💰 Commission Withdrawals</h3>
+        <div style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #28a745;">
+          <p><strong>Your PayPal:</strong> Paul.ebhomienlen@gmail.com</p>
+        </div>
         <div style="background: #f9f9f9; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
           <h4>Request Withdrawal</h4>
           <div style="display: grid; gap: 15px; margin-top: 15px;">
             <input type="number" id="withdrawAmount" placeholder="Amount ($)" min="0" step="0.01" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-            <input type="email" id="withdrawPayPal" placeholder="PayPal Email" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <input type="email" id="withdrawPayPal" placeholder="PayPal Email" value="Paul.ebhomienlen@gmail.com" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
             <button onclick="requestWithdrawal()" style="background: #28a745; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">📤 Request Withdrawal</button>
           </div>
         </div>

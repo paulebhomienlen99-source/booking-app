@@ -2037,7 +2037,7 @@ app.get('/withdrawals/history', async (req, res) => {
     amount: 500,
     status: 'pending',
     request_date: new Date(),
-    paypal_email: 'admin@bookhub.app',
+    paypal_email: process.env.ADMIN_PAYPAL_EMAIL || 'admin@bookhub.app',
     transaction_id: null
   }]);
 });
