@@ -148,10 +148,10 @@
           <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">All-time bookings</p>
         </div>
         
-        <div class="card" style="background: linear-gradient(135deg, #ffc107, #ff9800); color: white; text-align: center; padding: 25px;">
-          <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">📋 YOUR PLAN</p>
-          <h2 id="activePlan" style="color: white; font-size: 1.8em; margin: 0; font-weight: bold;">FREE</h2>
-          <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;" id="planDetails">10/10 bookings</p>
+        <div class="card" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; text-align: center; padding: 25px;">
+          <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">🌟 MEMBER SINCE</p>
+          <h2 style="color: white; font-size: 1.8em; margin: 0; font-weight: bold;" id="memberSince">Today</h2>
+          <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">Unlimited Bookings</p>
         </div>
       </div>
 
@@ -206,16 +206,6 @@
       </div>
 
       <div class="card">
-        <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3em;">📦 Subscription Plans</h3>
-        <div id="currentPlan" style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-          <p style="margin: 0; color: #666;">Current Plan: <span id="planName" style="font-weight: bold; color: #667eea;">Free</span></p>
-          <p style="margin: 5px 0 0 0; color: #999; font-size: 0.9em;">Bookings used: <span id="bookingsUsed">0</span>/<span id="bookingsLimit">10</span></p>
-        </div>
-        <div id="plansContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;"></div>
-        <div id="planUpgradeContainer" style="display: none; background: #f9f9f9; padding: 20px; border-radius: 10px; border: 2px solid #667eea;">
-          <h4 style="color: #667eea; margin-top: 0;">Complete Payment</h4>
-          <div id="planUpgradeButtons"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -769,117 +759,15 @@
       }
     }
 
-    async function loadSubscriptionPlans() {
-      try {
-        const res = await fetch(`${API}/subscription-plans`);
-        const plans = await res.json();
-        const container = document.getElementById('plansContainer');
-        
-        container.innerHTML = plans.map(plan => `
-          <div style="background: ${plan.id === 'premium' ? 'linear-gradient(135deg, #667eea, #764ba2)' : '#f9f9f9'}; border: 2px solid ${plan.id === 'premium' ? '#667eea' : '#ddd'}; border-radius: 10px; padding: 20px; text-align: center;">
-            <h4 style="color: ${plan.id === 'premium' ? 'white' : '#333'}; margin: 0 0 10px 0; font-size: 1.2em;">${plan.name}</h4>
-            <p style="color: ${plan.id === 'premium' ? '#eee' : '#666'}; margin: 10px 0; font-size: 2em; font-weight: bold;">$${plan.price}<span style="font-size: 0.5em;">/mo</span></p>
-            <p style="color: ${plan.id === 'premium' ? '#ddd' : '#999'}; margin: 10px 0; font-size: 0.9em;">${plan.bookings === 999 ? 'Unlimited' : plan.bookings} bookings/month</p>
-            <ul style="text-align: left; color: ${plan.id === 'premium' ? '#eee' : '#666'}; margin: 15px 0; padding: 0; list-style: none;">
-              ${plan.features.map(f => `<li style="padding: 5px 0;">✓ ${f}</li>`).join('')}
-            </ul>
-            <button onclick="upgradePlan('${plan.id}')" style="background: ${plan.id === 'premium' ? 'white' : '#667eea'}; color: ${plan.id === 'premium' ? '#667eea' : 'white'}; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
-              ${plan.id === 'free' ? 'Current Plan' : 'Upgrade'}
-            </button>
-          </div>
-        `).join('');
-      } catch (err) {
-        console.error('Error loading subscription plans:', err);
-      }
-    }
-
-    async function loadCurrentSubscription() {
-      try {
-        const res = await fetch(`${API}/subscription`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const sub = await res.json();
-        document.getElementById('planName').textContent = sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1);
-        document.getElementById('bookingsUsed').textContent = sub.monthly_bookings;
-        document.getElementById('bookingsLimit').textContent = sub.booking_limit;
-      } catch (err) {
-        console.error('Error loading subscription:', err);
-      }
-    }
-
-    async function upgradePlan(planId) {
-      if (planId === 'free') {
-        alert('You are already on the Free plan!');
-        return;
-      }
-
-      const planNames = { pro: 'Pro', premium: 'Premium' };
-      const planPrices = { pro: 9.99, premium: 29.99 };
-      const price = planPrices[planId];
-      const name = planNames[planId];
-      
-      try {
-        // Create PayPal order for subscription
-        const res = await fetch(`${API}/payments/paypal/create-order`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ booking_id: `plan_${planId}`, amount: price })
-        });
-        const orderData = await res.json();
-        
-        if (!orderData.id) {
-          alert('Error creating payment: ' + JSON.stringify(orderData));
-          return;
-        }
-        
-        // Store plan info for after approval
-        localStorage.setItem('pendingPlanUpgrade', planId);
-        
-        // Render PayPal button for subscription
-        document.getElementById('planUpgradeContainer').style.display = 'block';
-        
-        paypal.Buttons({
-          createOrder: () => orderData.id,
-          onApprove: async (data) => {
-            const captureRes = await fetch(`${API}/payments/paypal/capture-order`, {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({ order_id: data.orderID, booking_id: `plan_${planId}` })
-            });
-            const result = await captureRes.json();
-            
-            if (result.status === 'COMPLETED') {
-              // Now upgrade the subscription
-              const upgradeRes = await fetch(`${API}/subscription/upgrade`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan: planId })
-              });
-              const upgradeData = await upgradeRes.json();
-              
-              if (upgradeRes.ok) {
-                alert(`Upgraded to ${name} plan!`);
-                localStorage.removeItem('pendingPlanUpgrade');
-                loadCurrentSubscription();
-                loadSubscriptionPlans();
-                document.getElementById('planUpgradeContainer').style.display = 'none';
-              }
-            }
-          },
-          onError: (err) => alert('Payment error: ' + err)
-        }).render('#planUpgradeButtons');
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    }
+    async function loadSubscriptionPlans() {}
+    async function loadCurrentSubscription() {}
+    async function upgradePlan(planId) {}
 
     function switchPage(page) {
       document.getElementById('bookingSection').classList.toggle('hidden', page !== 'bookings');
       document.getElementById('dashboardSection').classList.toggle('hidden', page !== 'dashboard');
       if (page === 'dashboard') {
         loadEarnings();
-        loadSubscriptionPlans();
-        loadCurrentSubscription();
       }
     }
 

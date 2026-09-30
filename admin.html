@@ -80,7 +80,6 @@
         <button class="tab-btn" onclick="switchTab('bookings')">📅 Bookings</button>
         <button class="tab-btn" onclick="switchTab('payments')">💳 Payments</button>
         <button class="tab-btn" onclick="switchTab('withdrawals')">💰 Withdrawals</button>
-        <button class="tab-btn" onclick="switchTab('subscriptions')">🎁 Subscriptions</button>
       </div>
 
       <div id="users-tab" class="tab-content active">
@@ -115,9 +114,6 @@
         <div id="withdrawalsTable" style="overflow-x: auto; margin-top: 15px;"></div>
       </div>
 
-      <div id="subscriptions-tab" class="tab-content">
-        <h3>All Subscriptions</h3>
-        <div id="subscriptionsTable" style="overflow-x: auto; margin-top: 15px;"></div>
       </div>
     </div>
   </div>
@@ -189,7 +185,6 @@
         loadUsers(),
         loadBookings(),
         loadPayments(),
-        loadSubscriptions(),
         loadWithdrawals()
       ]);
       
@@ -340,45 +335,6 @@
         document.getElementById('paymentsTable').innerHTML = table;
       } catch (err) {
         console.error('Error loading payments:', err);
-      }
-    }
-
-    async function loadSubscriptions() {
-      try {
-        const res = await fetch(`${API}/admin/subscriptions`, {
-          headers: { 'Authorization': `Bearer ${adminToken}` }
-        });
-        const subs = await res.json();
-
-        const table = `
-          <table>
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Plan</th>
-                <th>Bookings Used</th>
-                <th>Limit</th>
-                <th>Price/Month</th>
-                <th>Auto-Renew</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${subs.map(s => `
-                <tr>
-                  <td>${s.name} (${s.email})</td>
-                  <td>${s.plan.toUpperCase()}</td>
-                  <td>${s.monthly_bookings}</td>
-                  <td>${s.booking_limit}</td>
-                  <td>$${parseFloat(s.renewal_price || 0).toFixed(2)}</td>
-                  <td>${s.auto_renew ? '✅ Yes' : '❌ No'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
-        document.getElementById('subscriptionsTable').innerHTML = table;
-      } catch (err) {
-        console.error('Error loading subscriptions:', err);
       }
     }
 
