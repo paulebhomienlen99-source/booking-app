@@ -1013,7 +1013,7 @@ app.post('/bookings', verifyToken, async (req, res) => {
     const subRes = await client.query('SELECT plan, booking_limit, monthly_bookings FROM subscriptions WHERE user_id = $1', [req.userId]);
     const sub = subRes.rows[0] || { plan: 'free', booking_limit: 10, monthly_bookings: 0 };
     
-    if (sub.plan === 'free' && sub.monthly_bookings >= sub.booking_limit) {
+    if (false && sub.plan === 'free' && sub.monthly_bookings >= sub.booking_limit) {
       return res.status(403).json({ error: `Free plan limit reached (${sub.booking_limit}/month). Upgrade to Premium!` });
     }
     
