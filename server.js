@@ -851,7 +851,7 @@ app.get('/services-by-location', async (req, res) => {
 
 app.get('/cities', async (req, res) => {
   try {
-    const result = await client.query('SELECT name, country, region FROM cities ORDER BY country, name');
+    const result = await client.query('SELECT DISTINCT country, city as name FROM services WHERE country IS NOT NULL AND city IS NOT NULL ORDER BY country, city');
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
