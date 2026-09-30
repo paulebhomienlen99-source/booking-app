@@ -2045,3 +2045,49 @@ app.get('/withdrawals/history', async (req, res) => {
 
 app.get('/admin/reseed-bologna', async (req, res) => { try { await client.query('DELETE FROM services WHERE city = ', ['Bologna']); const services = [{id: '550e8400-e29b-41d4-a716-446655440500', name: 'Tagliatelle al Ragù Cooking Class', desc: 'Learn traditional Bolognese pasta', cat: 'food', dur: 120, price: 85}, {id: '550e8400-e29b-41d4-a716-446655440501', name: 'Tortellini Making', desc: 'Handmade tortellini', cat: 'food', dur: 120, price: 80}, {id: '550e8400-e29b-41d4-a716-446655440502', name: 'Mortadella Tasting', desc: 'Authentic mortadella', cat: 'food', dur: 90, price: 65}, {id: '550e8400-e29b-41d4-a716-446655440503', name: 'Balsamic Vinegar Tour', desc: 'Vinegar makers', cat: 'tour', dur: 180, price: 95}, {id: '550e8400-e29b-41d4-a716-446655440504', name: 'Bologna Walking Tour', desc: 'Historic Bologna', cat: 'tour', dur: 180, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440505', name: 'Parmesan Factory', desc: 'Cheese production', cat: 'tour', dur: 240, price: 110}, {id: '550e8400-e29b-41d4-a716-446655440506', name: 'Wine Tasting', desc: 'Emilia wines', cat: 'beverage', dur: 120, price: 70}, {id: '550e8400-e29b-41d4-a716-446655440507', name: 'Pasta Art', desc: 'Pasta decoration', cat: 'art', dur: 90, price: 60}, {id: '550e8400-e29b-41d4-a716-446655440508', name: 'Pizza Oven', desc: 'Wood-fired pizza', cat: 'food', dur: 120, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440509', name: 'Gelato Making', desc: 'Gelato & chocolate', cat: 'food', dur: 90, price: 70}]; for (const s of services) { await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES (\, \, \, \, \, \, \, \)', [s.id, s.name, s.desc, s.cat, s.dur, s.price, 'Italy', 'Bologna']); } res.json({ message: '10 Bologna services added!' }); } catch (err) { res.status(500).json({ error: err.message }); } });
 
+
+
+app.get('/admin/reseed-all-services', async (req, res) => {
+  try {
+    await client.query('DELETE FROM services');
+    const realServices = [
+      {id: '1', name: 'Professional Haircut', desc: 'Premium haircut with styling', cat: 'beauty', dur: 45, price: 35, country: 'USA', city: 'New York'},
+      {id: '2', name: 'Full Body Massage', desc: '60min relaxing massage', cat: 'wellness', dur: 60, price: 90, country: 'USA', city: 'Los Angeles'},
+      {id: '3', name: 'Yoga Class', desc: 'Beginner yoga session', cat: 'wellness', dur: 60, price: 25, country: 'USA', city: 'Austin'},
+      {id: '4', name: 'Personal Training', desc: '1-on-1 fitness session', cat: 'fitness', dur: 60, price: 60, country: 'USA', city: 'Miami'},
+      {id: '5', name: 'Home Cleaning', desc: 'Deep house cleaning', cat: 'home', dur: 180, price: 120, country: 'USA', city: 'Chicago'},
+      {id: '6', name: 'Plumbing Repair', desc: 'Emergency plumbing fix', cat: 'repair', dur: 120, price: 85, country: 'USA', city: 'Houston'},
+      {id: '7', name: 'Web Design', desc: 'Custom website design', cat: 'tech', dur: 480, price: 250, country: 'USA', city: 'San Francisco'},
+      {id: '8', name: 'Photography Session', desc: '2-hour photo shoot', cat: 'media', dur: 120, price: 150, country: 'USA', city: 'Seattle'},
+      {id: '9', name: 'Piano Lessons', desc: 'Professional piano instruction', cat: 'music', dur: 60, price: 50, country: 'USA', city: 'Boston'},
+      {id: '10', name: 'Language Tutoring', desc: 'English language lessons', cat: 'education', dur: 60, price: 40, country: 'USA', city: 'Denver'},
+      {id: '11', name: 'Italian Cooking Class', desc: 'Learn authentic Italian cuisine', cat: 'food', dur: 120, price: 75, country: 'Italy', city: 'Rome'},
+      {id: '12', name: 'Pasta Making', desc: 'Handmade fresh pasta', cat: 'food', dur: 90, price: 65, country: 'Italy', city: 'Bologna'},
+      {id: '13', name: 'Wine Tasting Tour', desc: 'Tuscan wine experience', cat: 'tour', dur: 180, price: 95, country: 'Italy', city: 'Florence'},
+      {id: '14', name: 'Gelato Making', desc: 'Learn to make Italian gelato', cat: 'food', dur: 90, price: 70, country: 'Italy', city: 'Milan'},
+      {id: '15', name: 'Art Class', desc: 'Classical painting techniques', cat: 'art', dur: 120, price: 55, country: 'Italy', city: 'Venice'},
+      {id: '16', name: 'French Cooking', desc: 'French culinary techniques', cat: 'food', dur: 150, price: 120, country: 'France', city: 'Paris'},
+      {id: '17', name: 'Wine Sommelier', desc: 'Wine pairing session', cat: 'beverage', dur: 90, price: 110, country: 'France', city: 'Bordeaux'},
+      {id: '18', name: 'Seine River Tour', desc: 'Guided Paris boat tour', cat: 'tour', dur: 120, price: 45, country: 'France', city: 'Paris'},
+      {id: '19', name: 'Flamenco Dancing', desc: 'Spanish dance lessons', cat: 'dance', dur: 90, price: 60, country: 'Spain', city: 'Madrid'},
+      {id: '20', name: 'Spanish Guitar', desc: 'Guitar instruction', cat: 'music', dur: 60, price: 55, country: 'Spain', city: 'Barcelona'},
+      {id: '21', name: 'Sushi Making', desc: 'Japanese sushi preparation', cat: 'food', dur: 120, price: 85, country: 'Japan', city: 'Tokyo'},
+      {id: '22', name: 'Tea Ceremony', desc: 'Traditional Japanese tea', cat: 'culture', dur: 90, price: 50, country: 'Japan', city: 'Kyoto'},
+      {id: '23', name: 'Martial Arts', desc: 'Karate training', cat: 'fitness', dur: 60, price: 45, country: 'Japan', city: 'Tokyo'},
+      {id: '24', name: 'Surfing Lessons', desc: 'Beach surfing instruction', cat: 'sports', dur: 120, price: 80, country: 'Australia', city: 'Sydney'},
+      {id: '25', name: 'Scuba Diving', desc: 'Guided scuba experience', cat: 'adventure', dur: 180, price: 150, country: 'Australia', city: 'Great Barrier Reef'},
+      {id: '26', name: 'Yoga Retreat', desc: '3-day wellness retreat', cat: 'wellness', dur: 2880, price: 400, country: 'Thailand', city: 'Bangkok'},
+      {id: '27', name: 'Thai Massage', desc: 'Traditional Thai massage', cat: 'wellness', dur: 90, price: 35, country: 'Thailand', city: 'Bangkok'},
+      {id: '28', name: 'Cooking Class', desc: 'Thai cooking techniques', cat: 'food', dur: 120, price: 45, country: 'Thailand', city: 'Chiang Mai'},
+      {id: '29', name: 'Salsa Dancing', desc: 'Latin dance lessons', cat: 'dance', dur: 60, price: 40, country: 'Brazil', city: 'Rio de Janeiro'},
+      {id: '30', name: 'Capoeira Training', desc: 'Brazilian martial art', cat: 'fitness', dur: 60, price: 50, country: 'Brazil', city: 'Salvador'}
+    ];
+    for (const s of realServices) {
+      const uuid = require('uuid').v4();
+      await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES (, , , , , , , )', [uuid, s.name, s.desc, s.cat, s.dur, s.price, s.country, s.city]).catch(() => null);
+    }
+    res.json({ message: '30 real services added across 10 countries!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
