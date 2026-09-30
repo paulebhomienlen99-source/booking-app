@@ -2095,10 +2095,10 @@ app.get('/admin/reseed-all-services', async (req, res) => {
 
 app.get('/admin/load-real-services', async (req, res) => {
   try {
-    // Delete old services and related data
-    await client.query('DELETE FROM bookings CASCADE');
-    await client.query('DELETE FROM payments CASCADE');
-    await client.query('DELETE FROM services CASCADE');
+    // Delete in correct order to avoid FK constraints
+    await client.query('DELETE FROM payments');
+    await client.query('DELETE FROM bookings');
+    await client.query('DELETE FROM services');
     
     // Insert new real services
     const services = [
