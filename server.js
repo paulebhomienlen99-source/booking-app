@@ -218,7 +218,7 @@ if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
 
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: false
 });
 
 client.connect().catch(err => console.error('Connection error:', err));
@@ -2043,7 +2043,7 @@ app.get('/withdrawals/history', async (req, res) => {
 });
 
 
-app.get('/admin/reseed-bologna', async (req, res) => { try { await client.query('DELETE FROM services WHERE city = ', ['Bologna']); const services = [{id: '550e8400-e29b-41d4-a716-446655440500', name: 'Tagliatelle al Ragù Cooking Class', desc: 'Learn traditional Bolognese pasta', cat: 'food', dur: 120, price: 85}, {id: '550e8400-e29b-41d4-a716-446655440501', name: 'Tortellini Making', desc: 'Handmade tortellini', cat: 'food', dur: 120, price: 80}, {id: '550e8400-e29b-41d4-a716-446655440502', name: 'Mortadella Tasting', desc: 'Authentic mortadella', cat: 'food', dur: 90, price: 65}, {id: '550e8400-e29b-41d4-a716-446655440503', name: 'Balsamic Vinegar Tour', desc: 'Vinegar makers', cat: 'tour', dur: 180, price: 95}, {id: '550e8400-e29b-41d4-a716-446655440504', name: 'Bologna Walking Tour', desc: 'Historic Bologna', cat: 'tour', dur: 180, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440505', name: 'Parmesan Factory', desc: 'Cheese production', cat: 'tour', dur: 240, price: 110}, {id: '550e8400-e29b-41d4-a716-446655440506', name: 'Wine Tasting', desc: 'Emilia wines', cat: 'beverage', dur: 120, price: 70}, {id: '550e8400-e29b-41d4-a716-446655440507', name: 'Pasta Art', desc: 'Pasta decoration', cat: 'art', dur: 90, price: 60}, {id: '550e8400-e29b-41d4-a716-446655440508', name: 'Pizza Oven', desc: 'Wood-fired pizza', cat: 'food', dur: 120, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440509', name: 'Gelato Making', desc: 'Gelato & chocolate', cat: 'food', dur: 90, price: 70}]; for (const s of services) { await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES (\, \, \, \, \, \, \, \)', [s.id, s.name, s.desc, s.cat, s.dur, s.price, 'Italy', 'Bologna']); } res.json({ message: '10 Bologna services added!' }); } catch (err) { res.status(500).json({ error: err.message }); } });
+app.get('/admin/reseed-bologna', async (req, res) => { try { await client.query('DELETE FROM services WHERE city = ', ['Bologna']); const services = [{id: '550e8400-e29b-41d4-a716-446655440500', name: 'Tagliatelle al Ragù Cooking Class', desc: 'Learn traditional Bolognese pasta', cat: 'food', dur: 120, price: 85}, {id: '550e8400-e29b-41d4-a716-446655440501', name: 'Tortellini Making', desc: 'Handmade tortellini', cat: 'food', dur: 120, price: 80}, {id: '550e8400-e29b-41d4-a716-446655440502', name: 'Mortadella Tasting', desc: 'Authentic mortadella', cat: 'food', dur: 90, price: 65}, {id: '550e8400-e29b-41d4-a716-446655440503', name: 'Balsamic Vinegar Tour', desc: 'Vinegar makers', cat: 'tour', dur: 180, price: 95}, {id: '550e8400-e29b-41d4-a716-446655440504', name: 'Bologna Walking Tour', desc: 'Historic Bologna', cat: 'tour', dur: 180, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440505', name: 'Parmesan Factory', desc: 'Cheese production', cat: 'tour', dur: 240, price: 110}, {id: '550e8400-e29b-41d4-a716-446655440506', name: 'Wine Tasting', desc: 'Emilia wines', cat: 'beverage', dur: 120, price: 70}, {id: '550e8400-e29b-41d4-a716-446655440507', name: 'Pasta Art', desc: 'Pasta decoration', cat: 'art', dur: 90, price: 60}, {id: '550e8400-e29b-41d4-a716-446655440508', name: 'Pizza Oven', desc: 'Wood-fired pizza', cat: 'food', dur: 120, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440509', name: 'Gelato Making', desc: 'Gelato & chocolate', cat: 'food', dur: 90, price: 70}]; for (const s of services) { await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [s.id, s.name, s.desc, s.cat, s.dur, s.price, 'Italy', 'Bologna']); } res.json({ message: '10 Bologna services added!' }); } catch (err) { res.status(500).json({ error: err.message }); } });
 
 
 
@@ -2166,7 +2166,7 @@ app.get('/admin/load-real-services', async (req, res) => {
     
     for (const s of services) {
       const uuid = uuidv4();
-      await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES (\, \, \, \, \, \, \, \)', [uuid, s[1], s[2], s[3], s[4], s[5], s[6], s[7]]).catch(e => null);
+      await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [uuid, s[1], s[2], s[3], s[4], s[5], s[6], s[7]]).catch(e => null);
     }
     
     res.json({ message: 'Successfully loaded 60 REAL marketplace services across 15 cities!', count: services.length });
@@ -2174,3 +2174,5 @@ app.get('/admin/load-real-services', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
