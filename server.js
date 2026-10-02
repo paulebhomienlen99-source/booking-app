@@ -346,6 +346,8 @@ async function initDB() {
     console.log('âœ“ Users table created with provider fields');
     
     await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, provider_id UUID REFERENCES users(id), name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, country VARCHAR(100), city VARCHAR(100), availability_status VARCHAR(50) DEFAULT 'available', available_count INT DEFAULT 999, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS availability_status VARCHAR(50) DEFAULT 'available'`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS available_count INT DEFAULT 999`);
     console.log('âœ“ Services table created with provider_id');
     
     await client.query(`CREATE TABLE IF NOT EXISTS notifications (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), type VARCHAR(50), title VARCHAR(255), message TEXT, read BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
