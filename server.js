@@ -15,6 +15,26 @@ app.use(cors());
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId || decoded.id;
+
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Invalid token payload' });
+    }
+
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
 
 // Twilio Configuration for SMS
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -30,7 +50,101 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Provider Profile Endpoints
+app.post('/auth/signup', async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({
+      error: 'Name, email, and password are required'
+    });
+  }
+
+  try {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existing = await client.query(
+      'SELECT id FROM users WHERE email = $1',
+      [normalizedEmail]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        error: 'Email already registered'
+      });
+    }
+
+    const id = uuidv4();
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await client.query(
+      'INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, $4)',
+      [id, normalizedEmail, passwordHash, name]
+    );
+
+    const token = jwt.sign(
+      { userId: id, email: normalizedEmail },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(201).json({ token, name });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({
+      error: 'Email and password are required'
+    });
+  }
+
+  try {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const result = await client.query(
+      'SELECT id, email, name, password_hash FROM users WHERE email = $1',
+      [normalizedEmail]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        error: 'Invalid email or password'
+      });
+    }
+
+    const user = result.rows[0];
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
+
+    if (!validPassword) {
+      return res.status(401).json({
+        error: 'Invalid email or password'
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      token,
+      name: user.name
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/provider/register', verifyToken, async (req, res) => {
   try {
     const { bio, phone } = req.body;
@@ -213,12 +327,13 @@ if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
     : new paypal.core.SandboxEnvironment(clientId, clientSecret);
   
   paypalClient = new paypal.core.PayPalHttpClient(environment);
-  console.log(`✓ PayPal client initialized (${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'SANDBOX'})`);
+  console.log(`âœ“ PayPal client initialized (${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'SANDBOX'})`);
 }
 
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
-  ssl: false
+  ssl: process.env.DYNO ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 10000
 });
 
 client.connect().catch(err => console.error('Connection error:', err));
@@ -228,19 +343,17 @@ async function initDB() {
     console.log('Starting database initialization...');
     
     await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, phone VARCHAR(20), bio TEXT, profile_image VARCHAR(500), rating DECIMAL(3,2) DEFAULT 0, total_reviews INT DEFAULT 0, is_provider BOOLEAN DEFAULT false, reset_token VARCHAR(255), reset_token_expires TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Users table created with provider fields');
+    console.log('âœ“ Users table created with provider fields');
     
     await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, provider_id UUID REFERENCES users(id), name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, country VARCHAR(100), city VARCHAR(100), availability_status VARCHAR(50) DEFAULT 'available', available_count INT DEFAULT 999, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Services table created with provider_id');
+    console.log('âœ“ Services table created with provider_id');
     
     await client.query(`CREATE TABLE IF NOT EXISTS notifications (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), type VARCHAR(50), title VARCHAR(255), message TEXT, read BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Notifications table created');
+    console.log('âœ“ Notifications table created');
     
-    await client.query(`CREATE TABLE IF NOT EXISTS booking_events (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id), event_date DATE NOT NULL, event_time TIME NOT NULL, event_type VARCHAR(50), reminder_sent BOOLEAN DEFAULT false)`);
-    console.log('✓ Booking events table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS cities (id UUID PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE, country VARCHAR(100) NOT NULL, region VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8))`);
-    console.log('✓ Cities table created');
+    console.log('âœ“ Cities table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, address VARCHAR(255), city VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8), user_latitude DECIMAL(10, 8), user_longitude DECIMAL(11, 8), status VARCHAR(50) DEFAULT 'pending', paypal_transaction_id VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id) UNIQUE, plan VARCHAR(50) DEFAULT 'free', booking_limit INT DEFAULT 10, monthly_bookings INT DEFAULT 0, subscription_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, next_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 month', renewal_price DECIMAL(10, 2), auto_renew BOOLEAN DEFAULT true, paypal_subscription_id VARCHAR(255))`);
@@ -250,489 +363,25 @@ async function initDB() {
     
     // New tables for enhanced features
     await client.query(`CREATE TABLE IF NOT EXISTS service_images (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, image_url TEXT NOT NULL, alt_text VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Service images table created');
+    console.log('âœ“ Service images table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS service_ratings (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5), comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Service ratings table created');
+    console.log('âœ“ Service ratings table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS provider_availability (id UUID PRIMARY KEY, provider_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, date DATE NOT NULL, start_time TIME NOT NULL, end_time TIME NOT NULL, is_available BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Provider availability table created');
+    console.log('âœ“ Provider availability table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS booking_confirmations (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, email_sent BOOLEAN DEFAULT false, sent_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('✓ Booking confirmations table created');
+    console.log('âœ“ Booking confirmations table created');
     
         await client.query(`CREATE TABLE IF NOT EXISTS reviews (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, booking_id UUID REFERENCES bookings(id) ON DELETE SET NULL, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5), review_text TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     console.log('Reviews table created');
     
     // Initialize earnings tracker
     await client.query(`INSERT INTO earnings (id) SELECT '00000000-0000-0000-0000-000000000000' WHERE NOT EXISTS (SELECT 1 FROM earnings)`);
-    console.log('✓ Subscriptions, payments, and earnings tables created');
-    console.log('✓ Admin users table created');
-    console.log('✓ Bookings table created');
-    
-    // Insert services
-    await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES 
-      ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'beauty', 30, 25.00, 'Italy', 'Rome'),
-      ('550e8400-e29b-41d4-a716-446655440002', 'Massage Therapy', 'Relaxing full-body massage', 'wellness', 60, 80.00, 'Italy', 'Milan'),
-      ('550e8400-e29b-41d4-a716-446655440003', 'Hair Styling', 'Professional hair styling', 'beauty', 45, 50.00, 'Italy', 'Florence'),
-      ('550e8400-e29b-41d4-a716-446655440100', 'Pizza Delivery', 'Authentic Italian pizza delivery', 'food', 30, 15.00, 'Italy', 'Rome'),
-      ('550e8400-e29b-41d4-a716-446655440101', 'Pasta Making Class', 'Learn traditional pasta making', 'food', 120, 45.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440102', 'Wine Tasting Tour', 'Tuscan wine tasting experience', 'tour', 180, 75.00, 'Italy', 'Florence'),
-      ('550e8400-e29b-41d4-a716-446655440007', 'City Taxi', 'Economy taxi service', 'taxi', 30, 15.00),
-      ('550e8400-e29b-41d4-a716-446655440008', 'Premium Taxi', 'Luxury taxi service', 'taxi', 30, 30.00),
-      ('550e8400-e29b-41d4-a716-446655440065', 'Economy Car Rental - Daily', 'Affordable economy car rental', 'carrent', 1440, 45.00),
-      ('550e8400-e29b-41d4-a716-446655440066', 'Compact Car Rental - Daily', 'Fuel-efficient compact car rental', 'carrent', 1440, 55.00),
-      ('550e8400-e29b-41d4-a716-446655440067', 'Mid-Size Car Rental - Daily', 'Spacious mid-size car rental', 'carrent', 1440, 65.00),
-      ('550e8400-e29b-41d4-a716-446655440068', 'SUV Rental - Daily', 'Large SUV for family trips', 'carrent', 1440, 85.00),
-      ('550e8400-e29b-41d4-a716-446655440069', 'Luxury Car Rental - Daily', 'Premium luxury car rental', 'carrent', 1440, 150.00),
-      ('550e8400-e29b-41d4-a716-446655440070', 'Van Rental - Daily', 'Spacious van for group travel', 'carrent', 1440, 95.00),
-      ('550e8400-e29b-41d4-a716-446655440071', 'Car Rental - Weekly', '7-day economy car rental', 'carrent', 10080, 280.00),
-      ('550e8400-e29b-41d4-a716-446655440072', 'SUV Rental - Weekly', '7-day SUV rental', 'carrent', 10080, 520.00),
-      ('550e8400-e29b-41d4-a716-446655440073', 'Luxury Car Rental - Weekly', '7-day luxury car rental', 'carrent', 10080, 900.00),
-      ('550e8400-e29b-41d4-a716-446655440074', 'Car Rental - Monthly', '30-day economy car rental', 'carrent', 43200, 1100.00),
-      ('550e8400-e29b-41d4-a716-446655440075', 'SUV Rental - Monthly', '30-day SUV rental', 'carrent', 43200, 2000.00),
-      ('550e8400-e29b-41d4-a716-446655440009', '5-Star Hotel', 'Luxury hotel with all amenities', 'hotel', 1440, 250.00),
-      ('550e8400-e29b-41d4-a716-446655440010', '4-Star Hotel', 'Comfortable hotel with great service', 'hotel', 1440, 150.00),
-      ('550e8400-e29b-41d4-a716-446655440011', 'Budget Hotel', 'Affordable hotel rooms', 'hotel', 1440, 75.00),
-      ('550e8400-e29b-41d4-a716-446655440012', 'Supermarket Shopping', 'Full grocery shopping service', 'supermarket', 120, 40.00),
-      ('550e8400-e29b-41d4-a716-446655440013', 'Organic Groceries', 'Fresh organic produce and products', 'supermarket', 90, 60.00),
-      ('550e8400-e29b-41d4-a716-446655440014', 'Pharmacy Delivery', 'Prescription and medicine delivery', 'supermarket', 45, 15.00),
-      ('550e8400-e29b-41d4-a716-446655440015', 'Holiday Home Cleaning', 'Deep clean before holidays', 'home', 180, 120.00),
-      ('550e8400-e29b-41d4-a716-446655440016', 'Holiday Home Preparation', 'Prepare home for vacation', 'home', 120, 100.00),
-      ('550e8400-e29b-41d4-a716-446655440017', 'Pet Care Services', 'Dog walking and pet sitting', 'home', 60, 35.00),
-      ('550e8400-e29b-41d4-a716-446655440018', 'Laundry Service', 'Professional laundry and ironing', 'home', 120, 50.00),
-      ('550e8400-e29b-41d4-a716-446655440019', 'House Maintenance', 'General repairs and maintenance', 'home', 120, 75.00),
-      ('550e8400-e29b-41d4-a716-446655440020', 'Grocery Delivery', 'Fresh groceries at your doorstep', 'supermarket', 60, 25.00),
-      ('550e8400-e29b-41d4-a716-446655440021', 'Baby Sitting - 4 Hours', 'Professional baby sitting service', 'childcare', 240, 60.00),
-      ('550e8400-e29b-41d4-a716-446655440022', 'Baby Sitting - 8 Hours', 'Full day baby sitting service', 'childcare', 480, 100.00),
-      ('550e8400-e29b-41d4-a716-446655440023', 'Newborn Care', 'Specialized newborn care and feeding', 'childcare', 240, 80.00),
-      ('550e8400-e29b-41d4-a716-446655440024', 'Dog Day Care', 'Full day dog care and exercise', 'petcare', 480, 50.00),
-      ('550e8400-e29b-41d4-a716-446655440025', 'Dog Grooming', 'Professional dog grooming service', 'petcare', 180, 75.00),
-      ('550e8400-e29b-41d4-a716-446655440026', 'Dog Training', 'Professional dog training session', 'petcare', 120, 65.00),
-      ('550e8400-e29b-41d4-a716-446655440027', 'Dog Walking - 30 min', 'Quick dog walking service', 'petcare', 30, 20.00),
-      ('550e8400-e29b-41d4-a716-446655440028', 'Pet Sitting', 'Care for pets while you are away', 'petcare', 240, 45.00),
-      ('550e8400-e29b-41d4-a716-446655440029', 'Gym Membership - Monthly', 'Full month gym access', 'gym', 2880, 45.00),
-      ('550e8400-e29b-41d4-a716-446655440030', 'Personal Training - 1 Hour', 'One-on-one personal training session', 'gym', 60, 70.00),
-      ('550e8400-e29b-41d4-a716-446655440031', 'Yoga Class - 1 Hour', 'Relaxing yoga class for all levels', 'gym', 60, 30.00),
-      ('550e8400-e29b-41d4-a716-446655440032', 'CrossFit Training', 'High-intensity CrossFit workout', 'gym', 60, 50.00),
-      ('550e8400-e29b-41d4-a716-446655440033', 'Pilates Class', 'Core strengthening pilates class', 'gym', 60, 35.00),
-      ('550e8400-e29b-41d4-a716-446655440034', 'Spinning Class', 'Indoor cycling class', 'gym', 45, 25.00),
-      ('550e8400-e29b-41d4-a716-446655440035', 'Swimming Session', 'Pool session with instructor', 'gym', 60, 40.00),
-      ('550e8400-e29b-41d4-a716-446655440036', 'Zumba Class', 'Fun dance fitness class', 'gym', 60, 25.00),
-      ('550e8400-e29b-41d4-a716-446655440037', 'Cozy Home Rental - 1 Night', 'Comfortable home rental for family', 'accommodation', 1440, 85.00),
-      ('550e8400-e29b-41d4-a716-446655440038', 'Luxury Home Rental - 1 Night', 'Premium home with modern amenities', 'accommodation', 1440, 150.00),
-      ('550e8400-e29b-41d4-a716-446655440039', 'Vacation Home - 1 Week', 'Full week vacation home rental', 'accommodation', 10080, 500.00),
-      ('550e8400-e29b-41d4-a716-446655440040', 'Bed & Breakfast - Standard', 'Cozy B&B with breakfast included', 'accommodation', 1440, 70.00),
-      ('550e8400-e29b-41d4-a716-446655440041', 'Bed & Breakfast - Deluxe', 'Luxury B&B with premium breakfast', 'accommodation', 1440, 110.00),
-      ('550e8400-e29b-41d4-a716-446655440042', 'B&B Package - 2 Nights', 'Two nights B&B stay with meals', 'accommodation', 2880, 180.00),
-      ('550e8400-e29b-41d4-a716-446655440043', 'Farm Stay Experience', 'Authentic farm stay with activities', 'accommodation', 1440, 95.00),
-      ('550e8400-e29b-41d4-a716-446655440044', 'Beach House Rental - 1 Night', 'Beachfront house with ocean view', 'accommodation', 1440, 200.00),
-      ('550e8400-e29b-41d4-a716-446655440045', 'Web Design Service', 'Professional website design and development', 'marketplace', 480, 150.00),
-      ('550e8400-e29b-41d4-a716-446655440046', 'Logo Design', 'Custom logo and branding design', 'marketplace', 240, 100.00),
-      ('550e8400-e29b-41d4-a716-446655440047', 'Social Media Management', 'Monthly social media content and posting', 'marketplace', 2880, 200.00),
-      ('550e8400-e29b-41d4-a716-446655440048', 'Content Writing - Blog Post', 'Professional blog post writing (1000 words)', 'marketplace', 120, 50.00),
-      ('550e8400-e29b-41d4-a716-446655440049', 'Video Editing Service', 'Professional video editing and production', 'marketplace', 360, 120.00),
-      ('550e8400-e29b-41d4-a716-446655440050', 'Photography Session - 2 Hours', 'Professional photo shoot session', 'marketplace', 120, 150.00),
-      ('550e8400-e29b-41d4-a716-446655440051', 'Wedding Photography - Full Day', 'Complete wedding day photography service', 'marketplace', 480, 500.00),
-      ('550e8400-e29b-41d4-a716-446655440052', 'Portrait Photography', 'Professional portrait and headshot session', 'marketplace', 90, 100.00),
-      ('550e8400-e29b-41d4-a716-446655440053', 'English Tutoring - 1 Hour', 'One-on-one English language tutoring', 'marketplace', 60, 40.00),
-      ('550e8400-e29b-41d4-a716-446655440054', 'Math Tutoring - 1 Hour', 'Professional mathematics tutoring', 'marketplace', 60, 45.00),
-      ('550e8400-e29b-41d4-a716-446655440055', 'Piano Lessons - 1 Hour', 'Professional piano instruction', 'marketplace', 60, 50.00),
-      ('550e8400-e29b-41d4-a716-446655440056', 'Guitar Lessons - 1 Hour', 'Guitar instruction for all levels', 'marketplace', 60, 40.00),
-      ('550e8400-e29b-41d4-a716-446655440057', 'Handyman Services - 1 Hour', 'General home repairs and maintenance', 'marketplace', 60, 55.00),
-      ('550e8400-e29b-41d4-a716-446655440058', 'Plumbing Repair', 'Professional plumbing services', 'marketplace', 120, 85.00),
-      ('550e8400-e29b-41d4-a716-446655440059', 'Electrical Work', 'Licensed electrician services', 'marketplace', 120, 95.00),
-      ('550e8400-e29b-41d4-a716-446655440060', 'House Painting - Per Room', 'Professional interior/exterior painting', 'marketplace', 240, 150.00),
-      ('550e8400-e29b-41d4-a716-446655440061', 'Freelance Accounting - 1 Hour', 'Small business accounting consultation', 'marketplace', 60, 60.00),
-      ('550e8400-e29b-41d4-a716-446655440062', 'Business Consulting - 1 Hour', 'Strategic business advice and planning', 'marketplace', 60, 75.00),
-      ('550e8400-e29b-41d4-a716-446655440063', 'Resume Writing Service', 'Professional resume and cover letter', 'marketplace', 90, 50.00),
-      ('550e8400-e29b-41d4-a716-446655440064', 'Interview Coaching - 1 Hour', 'Job interview preparation and coaching', 'marketplace', 60, 55.00),
-      ('550e8400-e29b-41d4-a716-446655440500', 'Tagliatelle al Ragù Cooking Class', 'Learn to make traditional Bolognese pasta', 'food', 120, 85.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440501', 'Tortellini Making Workshop', 'Master the art of handmade tortellini', 'food', 120, 80.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440502', 'Mortadella Tasting Tour', 'Taste authentic Bolognese mortadella', 'food', 90, 65.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440503', 'Balsamic Vinegar Tour', 'Visit traditional balsamic vinegar makers', 'tour', 180, 95.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440504', 'Medieval Bologna Walking Tour', 'Guided tour of historic Bologna', 'tour', 180, 75.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440505', 'Parmesan Cheese Factory Tour', 'Visit nearby Parmesan cheese production', 'tour', 240, 110.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440506', 'Italian Wine Tasting', 'Local Emilia wine tasting experience', 'beverage', 120, 70.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440507', 'Pasta Art Workshop', 'Learn pasta shaping and decoration', 'art', 90, 60.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440508', 'Traditional Pizza Oven Cooking', 'Learn to cook pizza in wood-fired ovens', 'food', 120, 75.00, 'Italy', 'Bologna'),
-      ('550e8400-e29b-41d4-a716-446655440509', 'Gelato & Chocolate Making', 'Create your own gelato and chocolate', 'food', 90, 70.00, 'Italy', 'Bologna')
-      ON CONFLICT DO NOTHING`);
-    console.log('✓ Services inserted');
-    
-    const cities = [
-      ['New York', 'USA', 'New York'],
-      ['Los Angeles', 'USA', 'California'],
-      ['Chicago', 'USA', 'Illinois'],
-      ['Houston', 'USA', 'Texas'],
-      ['Miami', 'USA', 'Florida'],
-      ['San Francisco', 'USA', 'California'],
-      ['Boston', 'USA', 'Massachusetts'],
-      ['Seattle', 'USA', 'Washington'],
-      ['Philadelphia', 'USA', 'Pennsylvania'],
-      ['Phoenix', 'USA', 'Arizona'],
-      ['San Antonio', 'USA', 'Texas'],
-      ['San Diego', 'USA', 'California'],
-      ['Dallas', 'USA', 'Texas'],
-      ['Austin', 'USA', 'Texas'],
-      ['Denver', 'USA', 'Colorado'],
-      ['Portland', 'USA', 'Oregon'],
-      ['Las Vegas', 'USA', 'Nevada'],
-      ['Atlanta', 'USA', 'Georgia'],
-      ['Detroit', 'USA', 'Michigan'],
-      ['Minneapolis', 'USA', 'Minnesota'],
-      ['Saint Paul', 'USA', 'Minnesota'],
-      ['Tampa', 'USA', 'Florida'],
-      ['Orlando', 'USA', 'Florida'],
-      ['Charlotte', 'USA', 'North Carolina'],
-      ['Nashville', 'USA', 'Tennessee'],
-      ['Memphis', 'USA', 'Tennessee'],
-      ['New Orleans', 'USA', 'Louisiana'],
-      ['Baltimore', 'USA', 'Maryland'],
-      ['Washington DC', 'USA', 'District of Columbia'],
-      ['Pittsburgh', 'USA', 'Pennsylvania'],
-      ['Cleveland', 'USA', 'Ohio'],
-      ['Columbus', 'USA', 'Ohio'],
-      ['Cincinnati', 'USA', 'Ohio'],
-      ['Indianapolis', 'USA', 'Indiana'],
-      ['Milwaukee', 'USA', 'Wisconsin'],
-      ['Louisville', 'USA', 'Kentucky'],
-      ['Kansas City', 'USA', 'Missouri'],
-      ['Saint Louis', 'USA', 'Missouri'],
-      ['Buffalo', 'USA', 'New York'],
-      ['Rochester', 'USA', 'New York'],
-      ['Albany', 'USA', 'New York'],
-      ['Hartford', 'USA', 'Connecticut'],
-      ['Providence', 'USA', 'Rhode Island'],
-      ['New Haven', 'USA', 'Connecticut'],
-      ['Burlington', 'USA', 'Vermont'],
-      ['Portland', 'USA', 'Maine'],
-      ['Manchester', 'USA', 'New Hampshire'],
-      ['Jersey City', 'USA', 'New Jersey'],
-      ['Newark', 'USA', 'New Jersey'],
-      ['Trenton', 'USA', 'New Jersey'],
-      ['Philadelphia', 'USA', 'Pennsylvania'],
-      ['Pittsburgh', 'USA', 'Pennsylvania'],
-      ['Allentown', 'USA', 'Pennsylvania'],
-      ['Baltimore', 'USA', 'Maryland'],
-      ['Richmond', 'USA', 'Virginia'],
-      ['Arlington', 'USA', 'Virginia'],
-      ['Raleigh', 'USA', 'North Carolina'],
-      ['Greensboro', 'USA', 'North Carolina'],
-      ['Charleston', 'USA', 'South Carolina'],
-      ['Savannah', 'USA', 'Georgia'],
-      ['Jacksonville', 'USA', 'Florida'],
-      ['Key West', 'USA', 'Florida'],
-      ['Birmingham', 'USA', 'Alabama'],
-      ['Montgomery', 'USA', 'Alabama'],
-      ['Mobile', 'USA', 'Alabama'],
-      ['Jackson', 'USA', 'Mississippi'],
-      ['Memphis', 'USA', 'Tennessee'],
-      ['Nashville', 'USA', 'Tennessee'],
-      ['Little Rock', 'USA', 'Arkansas'],
-      ['Houston', 'USA', 'Texas'],
-      ['Dallas', 'USA', 'Texas'],
-      ['San Antonio', 'USA', 'Texas'],
-      ['Austin', 'USA', 'Texas'],
-      ['Fort Worth', 'USA', 'Texas'],
-      ['Corpus Christi', 'USA', 'Texas'],
-      ['Beaumont', 'USA', 'Texas'],
-      ['Galveston', 'USA', 'Texas'],
-      ['Oklahoma City', 'USA', 'Oklahoma'],
-      ['Tulsa', 'USA', 'Oklahoma'],
-      ['Kansas City', 'USA', 'Kansas'],
-      ['Wichita', 'USA', 'Kansas'],
-      ['Omaha', 'USA', 'Nebraska'],
-      ['Lincoln', 'USA', 'Nebraska'],
-      ['Des Moines', 'USA', 'Iowa'],
-      ['Cedar Rapids', 'USA', 'Iowa'],
-      ['Davenport', 'USA', 'Iowa'],
-      ['Madison', 'USA', 'Wisconsin'],
-      ['Green Bay', 'USA', 'Wisconsin'],
-      ['Minneapolis', 'USA', 'Minnesota'],
-      ['Saint Paul', 'USA', 'Minnesota'],
-      ['Duluth', 'USA', 'Minnesota'],
-      ['Rapid City', 'USA', 'South Dakota'],
-      ['Sioux Falls', 'USA', 'South Dakota'],
-      ['Bismarck', 'USA', 'North Dakota'],
-      ['Fargo', 'USA', 'North Dakota'],
-      ['Billings', 'USA', 'Montana'],
-      ['Missoula', 'USA', 'Montana'],
-      ['Bozeman', 'USA', 'Montana'],
-      ['Denver', 'USA', 'Colorado'],
-      ['Boulder', 'USA', 'Colorado'],
-      ['Colorado Springs', 'USA', 'Colorado'],
-      ['Albuquerque', 'USA', 'New Mexico'],
-      ['Santa Fe', 'USA', 'New Mexico'],
-      ['Las Vegas', 'USA', 'Nevada'],
-      ['Reno', 'USA', 'Nevada'],
-      ['Phoenix', 'USA', 'Arizona'],
-      ['Tucson', 'USA', 'Arizona'],
-      ['Mesa', 'USA', 'Arizona'],
-      ['Chandler', 'USA', 'Arizona'],
-      ['Salt Lake City', 'USA', 'Utah'],
-      ['Provo', 'USA', 'Utah'],
-      ['Ogden', 'USA', 'Utah'],
-      ['Boise', 'USA', 'Idaho'],
-      ['Pocatello', 'USA', 'Idaho'],
-      ['Portland', 'USA', 'Oregon'],
-      ['Eugene', 'USA', 'Oregon'],
-      ['Salem', 'USA', 'Oregon'],
-      ['Seattle', 'USA', 'Washington'],
-      ['Spokane', 'USA', 'Washington'],
-      ['Tacoma', 'USA', 'Washington'],
-      ['Vancouver', 'USA', 'Washington'],
-      ['San Francisco', 'USA', 'California'],
-      ['Oakland', 'USA', 'California'],
-      ['San Jose', 'USA', 'California'],
-      ['San Diego', 'USA', 'California'],
-      ['Los Angeles', 'USA', 'California'],
-      ['Long Beach', 'USA', 'California'],
-      ['Pasadena', 'USA', 'California'],
-      ['Santa Monica', 'USA', 'California'],
-      ['Beverly Hills', 'USA', 'California'],
-      ['Sacramento', 'USA', 'California'],
-      ['Fresno', 'USA', 'California'],
-      ['Bakersfield', 'USA', 'California'],
-      ['Anaheim', 'USA', 'California'],
-      ['Santa Ana', 'USA', 'California'],
-      ['Irvine', 'USA', 'California'],
-      ['Honolulu', 'USA', 'Hawaii'],
-      ['Anchorage', 'USA', 'Alaska'],
-      ['Fairbanks', 'USA', 'Alaska'],
-      ['Tokyo', 'Japan', 'Tokyo'],
-      ['Yokohama', 'Japan', 'Kanagawa'],
-      ['Osaka', 'Japan', 'Osaka'],
-      ['Kobe', 'Japan', 'Hyogo'],
-      ['Kyoto', 'Japan', 'Kyoto'],
-      ['Nagoya', 'Japan', 'Aichi'],
-      ['Sapporo', 'Japan', 'Hokkaido'],
-      ['Fukuoka', 'Japan', 'Fukuoka'],
-      ['Kawasaki', 'Japan', 'Kanagawa'],
-      ['Saitama', 'Japan', 'Saitama'],
-      ['Kita', 'Japan', 'Tokyo'],
-      ['Nishi', 'Japan', 'Tokyo'],
-      ['Hiroshima', 'Japan', 'Hiroshima'],
-      ['Sendai', 'Japan', 'Miyagi'],
-      ['Chiba', 'Japan', 'Chiba'],
-      ['Hamamatsu', 'Japan', 'Shizuoka'],
-      ['Matsuyama', 'Japan', 'Ehime'],
-      ['Shizuoka', 'Japan', 'Shizuoka'],
-      ['Okayama', 'Japan', 'Okayama'],
-      ['Kumamoto', 'Japan', 'Kumamoto'],
-      ['Beijing', 'China', 'Beijing'],
-      ['Shanghai', 'China', 'Shanghai'],
-      ['Chongqing', 'China', 'Chongqing'],
-      ['Tianjin', 'China', 'Tianjin'],
-      ['Xi\'an', 'China', 'Shaanxi'],
-      ['Guangzhou', 'China', 'Guangdong'],
-      ['Shenzhen', 'China', 'Guangdong'],
-      ['Wuhan', 'China', 'Hubei'],
-      ['Chengdu', 'China', 'Sichuan'],
-      ['Nanjing', 'China', 'Jiangsu'],
-      ['Hangzhou', 'China', 'Zhejiang'],
-      ['Suzhou', 'China', 'Jiangsu'],
-      ['Shenyang', 'China', 'Liaoning'],
-      ['Qingdao', 'China', 'Shandong'],
-      ['Jinan', 'China', 'Shandong'],
-      ['Nanchang', 'China', 'Jiangxi'],
-      ['Hefei', 'China', 'Anhui'],
-      ['Fuzhou', 'China', 'Fujian'],
-      ['Xiamen', 'China', 'Fujian'],
-      ['Taiyuan', 'China', 'Shanxi'],
-      ['Lanzhou', 'China', 'Gansu'],
-      ['Urumqi', 'China', 'Xinjiang'],
-      ['Lhasa', 'China', 'Tibet'],
-      ['Kunming', 'China', 'Yunnan'],
-      ['Guiyang', 'China', 'Guizhou'],
-      ['Nanning', 'China', 'Guangxi'],
-      ['Harbin', 'China', 'Heilongjiang'],
-      ['Milan', 'Italy', 'Lombardy'],
-      ['Rome', 'Italy', 'Lazio'],
-      ['Venice', 'Italy', 'Veneto'],
-      ['Naples', 'Italy', 'Campania'],
-      ['Turin', 'Italy', 'Piedmont'],
-      ['Palermo', 'Italy', 'Sicily'],
-      ['Genoa', 'Italy', 'Liguria'],
-      ['Bologna', 'Italy', 'Emilia-Romagna'],
-      ['Florence', 'Italy', 'Tuscany'],
-      ['Bari', 'Italy', 'Apulia'],
-      ['Catania', 'Italy', 'Sicily'],
-      ['Verona', 'Italy', 'Veneto'],
-      ['Messina', 'Italy', 'Sicily'],
-      ['Padua', 'Italy', 'Veneto'],
-      ['Trieste', 'Italy', 'Friuli-Venezia Giulia'],
-      ['Brescia', 'Italy', 'Lombardy'],
-      ['Parma', 'Italy', 'Emilia-Romagna'],
-      ['Ravenna', 'Italy', 'Emilia-Romagna'],
-      ['Reggio Calabria', 'Italy', 'Calabria'],
-      ['Reggio Emilia', 'Italy', 'Emilia-Romagna'],
-      ['Perugia', 'Italy', 'Umbria'],
-      ['Modena', 'Italy', 'Emilia-Romagna'],
-      ['Pisa', 'Italy', 'Tuscany'],
-      ['Lecce', 'Italy', 'Apulia'],
-      ['Ancona', 'Italy', 'Marche'],
-      ['Bergamo', 'Italy', 'Lombardy'],
-      ['Udine', 'Italy', 'Friuli-Venezia Giulia'],
-      ['Como', 'Italy', 'Lombardy'],
-      ['Salerno', 'Italy', 'Campania'],
-      ['Sassari', 'Italy', 'Sardinia'],
-      ['Cagliari', 'Italy', 'Sardinia'],
-      ['Siena', 'Italy', 'Tuscany'],
-      ['Rimini', 'Italy', 'Emilia-Romagna'],
-      ['Terni', 'Italy', 'Umbria'],
-      ['Pescara', 'Italy', 'Abruzzo'],
-      ['L\'Aquila', 'Italy', 'Abruzzo'],
-      ['Chieti', 'Italy', 'Abruzzo'],
-      ['Potenza', 'Italy', 'Basilicata'],
-      ['Cosenza', 'Italy', 'Calabria'],
-      ['Crotone', 'Italy', 'Calabria'],
-      ['Lamezia Terme', 'Italy', 'Calabria'],
-      ['Caltanissetta', 'Italy', 'Sicily'],
-      ['Agrigento', 'Italy', 'Sicily'],
-      ['Trapani', 'Italy', 'Sicily'],
-      ['Enna', 'Italy', 'Sicily'],
-      ['Nuoro', 'Italy', 'Sardinia'],
-      ['Oristano', 'Italy', 'Sardinia'],
-      ['Isernia', 'Italy', 'Molise'],
-      ['Campobasso', 'Italy', 'Molise'],
-      ['Frosinone', 'Italy', 'Lazio'],
-      ['Latina', 'Italy', 'Lazio'],
-      ['Rieti', 'Italy', 'Lazio'],
-      ['Viterbo', 'Italy', 'Lazio'],
-      ['Benevento', 'Italy', 'Campania'],
-      ['Caserta', 'Italy', 'Campania'],
-      ['Avellino', 'Italy', 'Campania'],
-      ['Matera', 'Italy', 'Basilicata'],
-      ['Taranto', 'Italy', 'Apulia'],
-      ['Brindisi', 'Italy', 'Apulia'],
-      ['Foggia', 'Italy', 'Apulia'],
-      ['Barletta', 'Italy', 'Apulia'],
-      ['Pesaro', 'Italy', 'Marche'],
-      ['Fermo', 'Italy', 'Marche'],
-      ['Ascoli Piceno', 'Italy', 'Marche'],
-      ['Macerata', 'Italy', 'Marche'],
-      ['Tivoli', 'Italy', 'Lazio'],
-      ['Frascati', 'Italy', 'Lazio'],
-      ['Albano Laziale', 'Italy', 'Lazio'],
-      ['Genzano di Roma', 'Italy', 'Lazio'],
-      ['Mantova', 'Italy', 'Lombardy'],
-      ['Paris', 'France', 'Île-de-France'],
-      ['Lyon', 'France', 'Rhône-Alpes'],
-      ['Marseille', 'France', 'Provence'],
-      ['Berlin', 'Germany', 'Berlin'],
-      ['Munich', 'Germany', 'Bavaria'],
-      ['Hamburg', 'Germany', 'Hamburg'],
-      ['Frankfurt', 'Germany', 'Hesse'],
-      ['London', 'United Kingdom', 'England'],
-      ['Manchester', 'United Kingdom', 'England'],
-      ['Edinburgh', 'United Kingdom', 'Scotland'],
-      ['Madrid', 'Spain', 'Community of Madrid'],
-      ['Barcelona', 'Spain', 'Catalonia'],
-      ['Valencia', 'Spain', 'Community of Valencia'],
-      ['Amsterdam', 'Netherlands', 'North Holland'],
-      ['Rotterdam', 'Netherlands', 'South Holland'],
-      ['Brussels', 'Belgium', 'Brussels'],
-      ['Antwerp', 'Belgium', 'Flanders'],
-      ['Stockholm', 'Sweden', 'Stockholm'],
-      ['Gothenburg', 'Sweden', 'Västra Götaland'],
-      ['Oslo', 'Norway', 'Akershus'],
-      ['Bergen', 'Norway', 'Hordaland'],
-      ['Copenhagen', 'Denmark', 'Capital Region'],
-      ['Warsaw', 'Poland', 'Masovian'],
-      ['Krakow', 'Poland', 'Lesser Poland'],
-      ['Prague', 'Czech Republic', 'Prague'],
-      ['Budapest', 'Hungary', 'Budapest'],
-      ['Vienna', 'Austria', 'Vienna'],
-      ['Salzburg', 'Austria', 'Salzburg'],
-      ['Zurich', 'Switzerland', 'Zurich'],
-      ['Geneva', 'Switzerland', 'Geneva'],
-      ['Lisbon', 'Portugal', 'Lisbon'],
-      ['Dublin', 'Ireland', 'Dublin'],
-      ['San Juan', 'Puerto Rico', 'San Juan'],
-      ['Ponce', 'Puerto Rico', 'Ponce'],
-      ['Mayaguez', 'Puerto Rico', 'Mayaguez'],
-      ['Havana', 'Cuba', 'Havana'],
-      ['Santiago de Cuba', 'Cuba', 'Santiago de Cuba'],
-      ['Santa Clara', 'Cuba', 'Villa Clara'],
-      ['Camagüey', 'Cuba', 'Camagüey'],
-      ['Kingston', 'Jamaica', 'Kingston'],
-      ['Montego Bay', 'Jamaica', 'St. James'],
-      ['Negril', 'Jamaica', 'Westmoreland'],
-      ['Spanish Town', 'Jamaica', 'St. Catherine'],
-      ['Port-au-Prince', 'Haiti', 'West'],
-      ['Cap-Haïtien', 'Haiti', 'Nord'],
-      ['Santo Domingo', 'Dominican Republic', 'Santo Domingo'],
-      ['Santiago', 'Dominican Republic', 'Santiago'],
-      ['Punta Cana', 'Dominican Republic', 'La Altagracia'],
-      ['Puerto Plata', 'Dominican Republic', 'Puerto Plata'],
-      ['Bridgetown', 'Barbados', 'Saint Michael'],
-      ['Oistins', 'Barbados', 'Christ Church'],
-      ['Castries', 'Saint Lucia', 'Castries'],
-      ['Soufrière', 'Saint Lucia', 'Soufrière'],
-      ['Kingstown', 'Saint Vincent and the Grenadines', 'Saint George'],
-      ['Port of Spain', 'Trinidad and Tobago', 'Port of Spain'],
-      ['San Fernando', 'Trinidad and Tobago', 'San Fernando'],
-      ['Scarborough', 'Trinidad and Tobago', 'Tobago'],
-      ['Oranjestad', 'Aruba', 'Oranjestad'],
-      ['Willemstad', 'Curaçao', 'Willemstad'],
-      ['Philipsburg', 'Sint Maarten', 'Philipsburg'],
-      ['Basseterre', 'Saint Kitts and Nevis', 'Basseterre'],
-      ['Charlestown', 'Nevis', 'Charlestown'],
-      ['The Valley', 'Anguilla', 'The Valley'],
-      ['Gustavia', 'Saint Barthélemy', 'Gustavia'],
-      ['Anguilla', 'British Virgin Islands', 'Road Town'],
-      ['Tortola', 'British Virgin Islands', 'Road Town'],
-      ['Virgin Gorda', 'British Virgin Islands', 'Virgin Gorda'],
-      ['Charlotte Amalie', 'US Virgin Islands', 'Saint Croix'],
-      ['Christiansted', 'US Virgin Islands', 'Saint Croix'],
-      ['Road Town', 'British Virgin Islands', 'Tortola'],
-      ['São Paulo', 'Brazil', 'São Paulo'],
-      ['Rio de Janeiro', 'Brazil', 'Rio de Janeiro'],
-      ['Salvador', 'Brazil', 'Bahia'],
-      ['Brasília', 'Brazil', 'Federal District'],
-      ['Fortaleza', 'Brazil', 'Ceará'],
-      ['Belo Horizonte', 'Brazil', 'Minas Gerais'],
-      ['Manaus', 'Brazil', 'Amazonas'],
-      ['Curitiba', 'Brazil', 'Paraná'],
-      ['Recife', 'Brazil', 'Pernambuco'],
-      ['Porto Alegre', 'Brazil', 'Rio Grande do Sul'],
-      ['Belém', 'Brazil', 'Pará'],
-      ['Goiânia', 'Brazil', 'Goiás'],
-      ['Guarulhos', 'Brazil', 'São Paulo'],
-      ['Campinas', 'Brazil', 'São Paulo'],
-      ['São Gonçalo', 'Brazil', 'Rio de Janeiro'],
-      ['Maceió', 'Brazil', 'Alagoas'],
-      ['Duque de Caxias', 'Brazil', 'Rio de Janeiro'],
-      ['São Bernardo do Campo', 'Brazil', 'São Paulo'],
-      ['Teresina', 'Brazil', 'Piauí'],
-      ['Santo André', 'Brazil', 'São Paulo'],
-      ['Sorocaba', 'Brazil', 'São Paulo'],
-      ['João Pessoa', 'Brazil', 'Paraíba'],
-      ['Osasco', 'Brazil', 'São Paulo'],
-      ['Natal', 'Brazil', 'Rio Grande do Norte'],
-      ['Santa Catarina', 'Brazil', 'Santa Catarina'],
-      ['Aracaju', 'Brazil', 'Sergipe'],
-      ['Palmas', 'Brazil', 'Tocantins'],
-      ['Boa Vista', 'Brazil', 'Roraima'],
-      ['Macapá', 'Brazil', 'Amapá']
-    ];
-    
-    for (const [name, country, region] of cities) {
-      await client.query(
-        'INSERT INTO cities (id, name, country, region) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-        [uuidv4(), name, country, region]
-      );
-    }
-    console.log('✓ 300+ cities from USA, Italy, Japan, and China inserted');
-    
-    // Create default admin user
-    const adminPasswordHash = await bcrypt.hash('Admin@BookHub2024', 10);
-    await client.query(
-      'INSERT INTO admin_users (id, email, password_hash, name) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-      [uuidv4(), 'admin@bookhub.app', adminPasswordHash, 'BookHub Admin']
-    );
-    console.log('✓ Admin user created (email: admin@bookhub.app, password: Admin@BookHub2024)');
+    console.log('âœ“ Subscriptions, payments, and earnings tables created');
+    console.log('âœ“ Admin users table created');
+    console.log('âœ“ Bookings table created');
     
     console.log('Database initialization complete!');
   } catch (err) {
@@ -740,325 +389,6 @@ async function initDB() {
   }
 }
 
-function verifyToken(req, res, next) {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'No token' });
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ error: 'Invalid token' });
-    req.userId = decoded.id;
-    req.userEmail = decoded.email;
-    next();
-  });
-}
-
-app.post('/auth/signup', async (req, res) => {
-  const { email, password, name } = req.body;
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = uuidv4();
-    await client.query('INSERT INTO users (id, email, password_hash, name) VALUES ($1, $2, $3, $4)', [userId, email, hashedPassword, name]);
-    const token = jwt.sign({ id: userId, email }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token, name, message: 'Signup successful', firstTime: true });
-    await sendEmail(email, 'Welcome to BookHub!', `<h2 style="color: #667eea;">Welcome to BookHub, ${name}!</h2><p>Your account created successfully. Explore amazing services in your city!</p>`).catch(err => console.error('Email error:', err));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/auth/login', async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
-    const user = result.rows[0];
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) return res.status(401).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token, name: user.name });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/auth/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  try {
-    const result = await client.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (result.rows.length === 0) return res.status(401).json({ error: 'Email not found' });
-    
-    const resetToken = uuidv4();
-    const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000);
-    
-    await client.query('UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE email = $3', [resetToken, expiresAt, email]);
-    
-    res.json({ message: 'Password reset token generated', token: resetToken });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/auth/reset-password', async (req, res) => {
-  const { resetToken, newPassword } = req.body;
-  try {
-    const result = await client.query('SELECT id FROM users WHERE reset_token = $1 AND reset_token_expires > NOW()', [resetToken]);
-    if (result.rows.length === 0) return res.status(401).json({ error: 'Invalid or expired reset token' });
-    
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await client.query('UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE reset_token = $2', [hashedPassword, resetToken]);
-    
-    res.json({ message: 'Password reset successful' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/services', async (req, res) => {
-  try {
-    const result = await client.query('SELECT * FROM services ORDER BY category, name');
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/services-by-location', async (req, res) => {
-  const { country, city } = req.query;
-  
-  try {
-    if (!country || !city) {
-      // Return all services if no location specified
-      const result = await client.query('SELECT * FROM services ORDER BY category, name');
-      return res.json(result.rows);
-    }
-    
-    // Try to get services specific to this location
-    const locationResult = await client.query(
-      'SELECT * FROM services WHERE country = $1 AND city = $2 ORDER BY category, name',
-      [country, city]
-    );
-    
-    if (locationResult.rows.length > 0) {
-      return res.json(locationResult.rows);
-    }
-    
-    // If no location-specific services, return all services
-    const allResult = await client.query('SELECT * FROM services ORDER BY category, name');
-    res.json(allResult.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/cities', async (req, res) => {
-  try {
-    const result = await client.query('SELECT DISTINCT country, city as name FROM services WHERE country IS NOT NULL AND city IS NOT NULL ORDER BY country, city');
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/subscription', verifyToken, async (req, res) => {
-  try {
-    let result = await client.query('SELECT plan, booking_limit, monthly_bookings, subscription_date FROM subscriptions WHERE user_id = $1', [req.userId]);
-    if (result.rows.length === 0) {
-      result = { rows: [{ plan: 'free', booking_limit: 10, monthly_bookings: 0, subscription_date: new Date() }] };
-    }
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/subscription-plans', (req, res) => {
-  res.json([
-    { id: 'free', name: 'Free', price: 0, bookings: 10, features: ['10 bookings/month', 'Basic support', 'Email notifications'] },
-    { id: 'pro', name: 'Pro', price: 9.99, bookings: 50, features: ['50 bookings/month', 'Priority support', 'Email notifications', 'Payment history'] },
-    { id: 'premium', name: 'Premium', price: 29.99, bookings: 999, features: ['Unlimited bookings', '24/7 support', 'Advanced analytics', 'API access', 'Custom branding'] }
-  ]);
-});
-
-app.post('/subscription/upgrade', verifyToken, async (req, res) => {
-  const { plan } = req.body;
-  try {
-    if (!['pro', 'premium'].includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
-    
-    const planLimits = { pro: 50, premium: 999 };
-    const planPrices = { pro: 9.99, premium: 29.99 };
-    
-    // Get user email for receipt
-    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [req.userId]);
-    const userEmail = userRes.rows[0]?.email;
-    
-    const result = await client.query('SELECT id FROM subscriptions WHERE user_id = $1', [req.userId]);
-    
-    if (result.rows.length === 0) {
-      await client.query(
-        'INSERT INTO subscriptions (id, user_id, plan, booking_limit, monthly_bookings, renewal_price, auto_renew) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-        [uuidv4(), req.userId, plan, planLimits[plan], 0, planPrices[plan], true]
-      );
-    } else {
-      await client.query(
-        'UPDATE subscriptions SET plan = $1, booking_limit = $2, monthly_bookings = 0, renewal_price = $3, auto_renew = $4 WHERE user_id = $5',
-        [plan, planLimits[plan], planPrices[plan], true, req.userId]
-      );
-    }
-    
-    // Send upgrade confirmation email
-    const emailHtml = `
-      <h2>Subscription Upgraded!</h2>
-      <p>Your subscription has been upgraded to <strong>${plan.toUpperCase()}</strong> plan.</p>
-      <p>Price: $${planPrices[plan]}/month</p>
-      <p>Bookings limit: ${planLimits[plan] === 999 ? 'Unlimited' : planLimits[plan]}/month</p>
-      <p>Thank you for supporting BookHub!</p>
-    `;
-    await sendEmail(userEmail, `BookHub: Upgraded to ${plan} plan`, emailHtml);
-    
-    res.json({ message: `Upgraded to ${plan} plan!`, plan, bookingLimit: planLimits[plan] });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/earnings', async (req, res) => {
-  try {
-    const result = await client.query('SELECT total_commission, total_bookings FROM earnings WHERE id = $1', ['00000000-0000-0000-0000-000000000000']);
-    res.json(result.rows[0] || { total_commission: 0, total_bookings: 0 });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/user-stats', verifyToken, async (req, res) => {
-  try {
-    // Get user's total bookings
-    const bookingsResult = await client.query(
-      'SELECT COUNT(*) as total_bookings FROM bookings WHERE user_id = $1',
-      [req.userId]
-    );
-    
-    // Get user's total revenue from completed bookings
-    const revenueResult = await client.query(
-      'SELECT COALESCE(SUM(p.total_paid), 0) as total_revenue FROM payments p WHERE p.user_id = $1 AND p.payment_status = $2',
-      [req.userId, 'completed']
-    );
-    
-    const totalBookings = parseInt(bookingsResult.rows[0].total_bookings) || 0;
-    const totalRevenue = parseFloat(revenueResult.rows[0].total_revenue) || 0;
-    
-    res.json({
-      total_bookings: totalBookings,
-      total_revenue: totalRevenue,
-      all_time_bookings: totalBookings
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/payment-history', verifyToken, async (req, res) => {
-  try {
-    const result = await client.query(`
-      SELECT p.id, p.booking_id, p.service_price, p.commission, p.total_paid, p.payment_status, p.created_at,
-        b.city, s.name as service_name, b.booking_date
-      FROM payments p
-      JOIN bookings b ON p.booking_id = b.id
-      JOIN services s ON b.service_id = s.id
-      WHERE p.user_id = $1
-      ORDER BY p.created_at DESC
-      LIMIT 50
-    `, [req.userId]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/orders', verifyToken, async (req, res) => {
-  try {
-    const result = await client.query(`
-      SELECT b.id, b.booking_date, b.booking_time, b.city, b.status, b.created_at,
-        s.name as service_name, s.price,
-        u.username
-      FROM bookings b
-      JOIN services s ON b.service_id = s.id
-      JOIN users u ON b.user_id = u.id
-      WHERE b.user_id = $1
-      ORDER BY b.created_at DESC
-      LIMIT 100
-    `, [req.userId]);
-    const orders = result.rows.map(row => ({
-      ...row,
-      commission: parseFloat(row.price) * 0.20
-    }));
-    res.json(orders);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/bookings', verifyToken, async (req, res) => {
-  const { service_id, booking_date, booking_time, address, city } = req.body;
-  const id = uuidv4();
-  try {
-    // Get service details
-    const serviceRes = await client.query('SELECT price FROM services WHERE id = $1', [service_id]);
-    if (serviceRes.rows.length === 0) return res.status(404).json({ error: 'Service not found' });
-    
-    const servicePrice = parseFloat(serviceRes.rows[0].price);
-    const commission = (servicePrice * 0.20); // 20% commission
-    const totalPaid = servicePrice + commission;
-    
-    // Check subscription limits
-    const subRes = await client.query('SELECT plan, booking_limit, monthly_bookings FROM subscriptions WHERE user_id = $1', [req.userId]);
-    const sub = subRes.rows[0] || { plan: 'free', booking_limit: 10, monthly_bookings: 0 };
-    
-    if (false && sub.plan === 'free' && sub.monthly_bookings >= sub.booking_limit) {
-      return res.status(403).json({ error: `Free plan limit reached (${sub.booking_limit}/month). Upgrade to Premium!` });
-    }
-    
-    // Create booking
-    await client.query('INSERT INTO bookings (id, user_id, service_id, booking_date, booking_time, address, city) VALUES ($1, $2, $3, $4, $5, $6, $7)', [id, req.userId, service_id, booking_date, booking_time, address, city]);
-    
-    // Record payment
-    await client.query('INSERT INTO payments (id, booking_id, user_id, service_price, commission, total_paid) VALUES ($1, $2, $3, $4, $5, $6)', [uuidv4(), id, req.userId, servicePrice, commission, totalPaid]);
-    
-    // Update subscription monthly bookings
-    if (subRes.rows.length === 0) {
-      await client.query('INSERT INTO subscriptions (id, user_id, plan) VALUES ($1, $2, $3)', [uuidv4(), req.userId, 'free']);
-    }
-    await client.query('UPDATE subscriptions SET monthly_bookings = monthly_bookings + 1 WHERE user_id = $1', [req.userId]);
-    
-    // Update total earnings
-    await client.query('UPDATE earnings SET total_commission = total_commission + $1, total_bookings = total_bookings + 1 WHERE id = $2', [commission, '00000000-0000-0000-0000-000000000000']);
-    
-    res.json({ id, message: 'Booking created', totalPaid, commission });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/bookings', verifyToken, async (req, res) => {
-  try {
-    const result = await client.query('SELECT b.*, s.name, s.price FROM bookings b JOIN services s ON b.service_id = s.id WHERE b.user_id = $1 ORDER BY b.booking_date DESC', [req.userId]);
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.patch('/bookings/:id', verifyToken, async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  try {
-    await client.query('UPDATE bookings SET status = $1 WHERE id = $2 AND user_id = $3', [status, id, req.userId]);
-    res.json({ message: 'Booking updated' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Service Ratings & Reviews
 app.post('/reviews', verifyToken, async (req, res) => {
   const { service_id, booking_id, rating, review_text } = req.body;
   try {
@@ -1197,6 +527,38 @@ app.delete('/provider-availability/:avail_id', verifyToken, async (req, res) => 
   }
 });
 
+app.post('/bookings', verifyToken, async (req, res) => {
+  const { service_id, booking_date, booking_time, address, city, latitude, longitude } = req.body;
+  if (!service_id || !booking_date || !booking_time || !address || !city) {
+    return res.status(400).json({ error: 'Service, date, time, address, and city are required' });
+  }
+  try {
+    const service = await client.query('SELECT id, name, price, city FROM services WHERE id = $1', [service_id]);
+    if (service.rows.length === 0) return res.status(404).json({ error: 'Service not found' });
+    const subscription = await client.query('SELECT * FROM subscriptions WHERE user_id = $1', [req.userId]);
+    const current = subscription.rows[0] || { booking_limit: 10, monthly_bookings: 0 };
+    if (current.monthly_bookings >= current.booking_limit) {
+      return res.status(403).json({ error: 'Monthly booking limit reached', plan: current.plan || 'free' });
+    }
+    const bookingId = uuidv4();
+    await client.query(
+      `INSERT INTO bookings (id, user_id, service_id, booking_date, booking_time, address, city, latitude, longitude)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [bookingId, req.userId, service_id, booking_date, booking_time, address, city, latitude || null, longitude || null]
+    );
+    await client.query(
+      `INSERT INTO subscriptions (id, user_id, plan, booking_limit, monthly_bookings, renewal_price)
+       VALUES ($1, $2, 'free', 10, 1, 0)
+       ON CONFLICT (user_id) DO UPDATE SET monthly_bookings = subscriptions.monthly_bookings + 1`,
+      [uuidv4(), req.userId]
+    );
+    res.status(201).json({ id: bookingId, price: service.rows[0].price, service_name: service.rows[0].name, status: 'pending' });
+  } catch (err) {
+    console.error('Booking creation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/bookings/:id', verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -1310,7 +672,7 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
         
         // Send email receipt
         const emailHTML = `
-          <h2>📧 Payment Receipt - BookHub</h2>
+          <h2>ðŸ“§ Payment Receipt - BookHub</h2>
           <p>Hello <strong>${booking.name}</strong>,</p>
           <p>Your payment has been successfully processed!</p>
           <hr>
@@ -1325,7 +687,7 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
             <li><strong>Total Paid:</strong> $${(parseFloat(booking.price) + commission).toFixed(2)}</li>
           </ul>
           <hr>
-          <p><strong>Status:</strong> ✅ Payment Completed</p>
+          <p><strong>Status:</strong> âœ… Payment Completed</p>
           <p>Order ID: ${booking_id}</p>
           <p>PayPal Transaction ID: ${order_id}</p>
           <hr>
@@ -1339,7 +701,7 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
         await sendNotification(
           req.userId,
           'booking_confirmed',
-          '🎉 Booking Confirmed!',
+          'ðŸŽ‰ Booking Confirmed!',
           `Your booking for ${booking.service_name} on ${booking.booking_date} has been confirmed. Payment successful!`
         );
       }
@@ -1424,7 +786,7 @@ app.post('/payments/stripe/confirm-payment', verifyToken, async (req, res) => {
     
     // Send email receipt
     const emailHTML = `
-      <h2>📧 Payment Receipt - BookHub</h2>
+      <h2>ðŸ“§ Payment Receipt - BookHub</h2>
       <p>Hello <strong>${booking.name}</strong>,</p>
       <p>Your payment has been successfully processed!</p>
       <hr>
@@ -1439,8 +801,8 @@ app.post('/payments/stripe/confirm-payment', verifyToken, async (req, res) => {
         <li><strong>Total Paid:</strong> $${totalPaid.toFixed(2)}</li>
       </ul>
       <hr>
-      <p><strong>Status:</strong> ✅ Payment Completed</p>
-      <p>Payment Method: 💳 Stripe Card Payment</p>
+      <p><strong>Status:</strong> âœ… Payment Completed</p>
+      <p>Payment Method: ðŸ’³ Stripe Card Payment</p>
       <p>Transaction ID: ${paymentIntent.charges.data[0].id}</p>
       <hr>
       <p>Thank you for booking with BookHub!</p>
@@ -1787,13 +1149,13 @@ app.post('/admin/reset-services', async (req, res) => {
     // Add country and city columns if they don't exist
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS country VARCHAR(100)`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-    console.log('✓ Columns added');
+    console.log('âœ“ Columns added');
     
     // Delete all bookings and payments first (cascade)
     await client.query('DELETE FROM payments');
     await client.query('DELETE FROM bookings');
     await client.query('DELETE FROM services');
-    console.log('✓ Old services, bookings, and payments deleted');
+    console.log('âœ“ Old services, bookings, and payments deleted');
     // Insert new country-specific services
     await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES 
       ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'beauty', 30, 25.00, 'Italy', 'Rome'),
@@ -1865,7 +1227,7 @@ app.post('/admin/reset-services', async (req, res) => {
       ('550e8400-e29b-41d4-a716-446655440600', 'Flamenco Lesson', 'Traditional flamenco dance class', 'entertainment', 90, 50.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440601', 'Paella Cooking Class', 'Learn authentic Spanish paella', 'food', 120, 60.00, 'Spain', 'Valencia'),
       ('550e8400-e29b-41d4-a716-446655440602', 'Sagrada Familia Tour', 'Guided Barcelona cathedral tour', 'tour', 120, 80.00, 'Spain', 'Barcelona'),
-      ('550e8400-e29b-41d4-a716-446655440603', 'Park Güell Tour', 'Guided Gaudí park experience', 'tour', 180, 95.00, 'Spain', 'Barcelona'),
+      ('550e8400-e29b-41d4-a716-446655440603', 'Park GÃ¼ell Tour', 'Guided GaudÃ­ park experience', 'tour', 180, 95.00, 'Spain', 'Barcelona'),
       ('550e8400-e29b-41d4-a716-446655440604', 'Spanish Guitar Lesson', 'Professional guitar instruction', 'freelance', 60, 55.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440605', 'Prado Museum Tour', 'Private art museum tour', 'tour', 180, 100.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440606', 'Tapas Food Tour', 'Spanish tapas tasting tour', 'food', 180, 70.00, 'Spain', 'Barcelona'),
@@ -1885,6 +1247,67 @@ app.post('/admin/reset-services', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });;
+
+app.get('/cities', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT DISTINCT country, city AS name
+      FROM services
+      WHERE country IS NOT NULL AND city IS NOT NULL
+      ORDER BY country, name
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Cities error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/services', async (req, res) => {
+  try {
+    const result = await client.query(`
+      SELECT id, name, description, price, country, city, availability_status
+      FROM services
+      ORDER BY country, city, name
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Services error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/services-by-location', async (req, res) => {
+  try {
+    const { country, city } = req.query;
+    const params = [];
+    const filters = [];
+
+    if (country) {
+      params.push(country);
+      filters.push(`country = $${params.length}`);
+    }
+
+    if (city) {
+      params.push(city);
+      filters.push(`city = $${params.length}`);
+    }
+
+    const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+
+    const result = await client.query(`
+      SELECT id, name, description, price, country, city, availability_status
+      FROM services
+      ${where}
+      ORDER BY name
+    `, params);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Location services error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get('/admin/dashboard', verifyAdmin, async (req, res) => {
   try {
@@ -1986,6 +1409,58 @@ app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
 app.get('/admin', (req, res) => res.sendFile(__dirname + '/admin.html'));
 
 const PORT = process.env.PORT || 3001;
+// Subscription endpoints
+const SUBSCRIPTION_PLANS = {
+  free: { name: 'Free', booking_limit: 10, renewal_price: 0 },
+  premium: { name: 'Premium', booking_limit: 50, renewal_price: 9.99 },
+  business: { name: 'Business', booking_limit: 200, renewal_price: 29.99 }
+};
+
+app.get('/subscriptions/plans', (req, res) => {
+  res.json(Object.entries(SUBSCRIPTION_PLANS).map(([id, plan]) => ({ id, ...plan })));
+});
+
+app.get('/subscriptions/me', verifyToken, async (req, res) => {
+  try {
+    const result = await client.query(
+      `SELECT id, plan, booking_limit, monthly_bookings, subscription_date, next_reset, renewal_price, auto_renew
+       FROM subscriptions WHERE user_id = $1`,
+      [req.userId]
+    );
+    if (result.rows.length === 0) {
+      const created = await client.query(
+        `INSERT INTO subscriptions (id, user_id, plan, booking_limit, renewal_price)
+         VALUES ($1, $2, 'free', $3, $4)
+         RETURNING id, plan, booking_limit, monthly_bookings, subscription_date, next_reset, renewal_price, auto_renew`,
+        [uuidv4(), req.userId, SUBSCRIPTION_PLANS.free.booking_limit, SUBSCRIPTION_PLANS.free.renewal_price]
+      );
+      return res.json(created.rows[0]);
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/subscriptions/upgrade', verifyToken, async (req, res) => {
+  const { plan } = req.body;
+  const selected = SUBSCRIPTION_PLANS[plan];
+  if (!selected || plan === 'free') return res.status(400).json({ error: 'Choose premium or business' });
+  try {
+    const result = await client.query(
+      `INSERT INTO subscriptions (id, user_id, plan, booking_limit, renewal_price)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id) DO UPDATE SET plan = EXCLUDED.plan, booking_limit = EXCLUDED.booking_limit,
+       renewal_price = EXCLUDED.renewal_price, subscription_date = CURRENT_TIMESTAMP, next_reset = CURRENT_TIMESTAMP + INTERVAL '1 month'
+       RETURNING id, plan, booking_limit, monthly_bookings, subscription_date, next_reset, renewal_price, auto_renew`,
+      [uuidv4(), req.userId, plan, selected.booking_limit, selected.renewal_price]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
   initDB();
@@ -2011,7 +1486,7 @@ app.post('/withdrawals/:id/process', async (req, res) => {
   const { transactionId } = req.body;
   try {
     const txId = transactionId || 'TX_' + Date.now();
-    const approvalEmail = `<h2>Withdrawal Approved! ✅</h2><p>Your withdrawal has been processed.</p><p><strong>Transaction ID:</strong> ${txId}</p><p>The funds will arrive in your PayPal account within 24-48 hours.</p>`;
+    const approvalEmail = `<h2>Withdrawal Approved! âœ…</h2><p>Your withdrawal has been processed.</p><p><strong>Transaction ID:</strong> ${txId}</p><p>The funds will arrive in your PayPal account within 24-48 hours.</p>`;
     await sendEmail(process.env.EMAIL_USER, 'Withdrawal Approved', approvalEmail).catch(() => null);
     res.json({ message: 'Withdrawal approved! Email sent to admin.', transactionId: txId, status: 'approved' });
   } catch (err) {
@@ -2023,7 +1498,7 @@ app.post('/withdrawals/:id/reject', async (req, res) => {
   const { id } = req.params;
   const { notes } = req.body;
   try {
-    const rejectEmail = `<h2>Withdrawal Rejected ❌</h2><p>Your withdrawal request has been rejected.</p><p><strong>Reason:</strong> ${notes || 'Not specified'}</p><p>Please contact support for more information.</p>`;
+    const rejectEmail = `<h2>Withdrawal Rejected âŒ</h2><p>Your withdrawal request has been rejected.</p><p><strong>Reason:</strong> ${notes || 'Not specified'}</p><p>Please contact support for more information.</p>`;
     await sendEmail(process.env.EMAIL_USER, 'Withdrawal Rejected', rejectEmail).catch(() => null);
     res.json({ message: 'Withdrawal rejected. Email notification sent.', status: 'rejected' });
   } catch (err) {
@@ -2043,7 +1518,7 @@ app.get('/withdrawals/history', async (req, res) => {
 });
 
 
-app.get('/admin/reseed-bologna', async (req, res) => { try { await client.query('DELETE FROM services WHERE city = ', ['Bologna']); const services = [{id: '550e8400-e29b-41d4-a716-446655440500', name: 'Tagliatelle al Rag� Cooking Class', desc: 'Learn traditional Bolognese pasta', cat: 'food', dur: 120, price: 85}, {id: '550e8400-e29b-41d4-a716-446655440501', name: 'Tortellini Making', desc: 'Handmade tortellini', cat: 'food', dur: 120, price: 80}, {id: '550e8400-e29b-41d4-a716-446655440502', name: 'Mortadella Tasting', desc: 'Authentic mortadella', cat: 'food', dur: 90, price: 65}, {id: '550e8400-e29b-41d4-a716-446655440503', name: 'Balsamic Vinegar Tour', desc: 'Vinegar makers', cat: 'tour', dur: 180, price: 95}, {id: '550e8400-e29b-41d4-a716-446655440504', name: 'Bologna Walking Tour', desc: 'Historic Bologna', cat: 'tour', dur: 180, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440505', name: 'Parmesan Factory', desc: 'Cheese production', cat: 'tour', dur: 240, price: 110}, {id: '550e8400-e29b-41d4-a716-446655440506', name: 'Wine Tasting', desc: 'Emilia wines', cat: 'beverage', dur: 120, price: 70}, {id: '550e8400-e29b-41d4-a716-446655440507', name: 'Pasta Art', desc: 'Pasta decoration', cat: 'art', dur: 90, price: 60}, {id: '550e8400-e29b-41d4-a716-446655440508', name: 'Pizza Oven', desc: 'Wood-fired pizza', cat: 'food', dur: 120, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440509', name: 'Gelato Making', desc: 'Gelato & chocolate', cat: 'food', dur: 90, price: 70}]; for (const s of services) { await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [s.id, s.name, s.desc, s.cat, s.dur, s.price, 'Italy', 'Bologna']); } res.json({ message: '10 Bologna services added!' }); } catch (err) { res.status(500).json({ error: err.message }); } });
+app.get('/admin/reseed-bologna', async (req, res) => { try { await client.query('DELETE FROM services WHERE city = ', ['Bologna']); const services = [{id: '550e8400-e29b-41d4-a716-446655440500', name: 'Tagliatelle al Ragù Cooking Class', desc: 'Learn traditional Bolognese pasta', cat: 'food', dur: 120, price: 85}, {id: '550e8400-e29b-41d4-a716-446655440501', name: 'Tortellini Making', desc: 'Handmade tortellini', cat: 'food', dur: 120, price: 80}, {id: '550e8400-e29b-41d4-a716-446655440502', name: 'Mortadella Tasting', desc: 'Authentic mortadella', cat: 'food', dur: 90, price: 65}, {id: '550e8400-e29b-41d4-a716-446655440503', name: 'Balsamic Vinegar Tour', desc: 'Vinegar makers', cat: 'tour', dur: 180, price: 95}, {id: '550e8400-e29b-41d4-a716-446655440504', name: 'Bologna Walking Tour', desc: 'Historic Bologna', cat: 'tour', dur: 180, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440505', name: 'Parmesan Factory', desc: 'Cheese production', cat: 'tour', dur: 240, price: 110}, {id: '550e8400-e29b-41d4-a716-446655440506', name: 'Wine Tasting', desc: 'Emilia wines', cat: 'beverage', dur: 120, price: 70}, {id: '550e8400-e29b-41d4-a716-446655440507', name: 'Pasta Art', desc: 'Pasta decoration', cat: 'art', dur: 90, price: 60}, {id: '550e8400-e29b-41d4-a716-446655440508', name: 'Pizza Oven', desc: 'Wood-fired pizza', cat: 'food', dur: 120, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440509', name: 'Gelato Making', desc: 'Gelato & chocolate', cat: 'food', dur: 90, price: 70}]; for (const s of services) { await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [s.id, s.name, s.desc, s.cat, s.dur, s.price, 'Italy', 'Bologna']); } res.json({ message: '10 Bologna services added!' }); } catch (err) { res.status(500).json({ error: err.message }); } });
 
 
 
@@ -2084,7 +1559,7 @@ app.get('/admin/reseed-all-services', async (req, res) => {
     ];
     for (const s of realServices) {
       const uuid = require('uuid').v4();
-      await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES (, , , , , , , )', [uuid, s.name, s.desc, s.cat, s.dur, s.price, s.country, s.city]).catch(() => null);
+      await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [uuid, s.name, s.desc, s.cat, s.dur, s.price, s.country, s.city]).catch(() => null);
     }
     res.json({ message: '30 real services added across 10 countries!' });
   } catch (err) {
@@ -2174,5 +1649,18 @@ app.get('/admin/load-real-services', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+
+
+
+
+
+client.on('error', (err) => console.error('Database error:', err));
+
+
+
+
+
 
 
