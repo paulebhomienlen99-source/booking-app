@@ -583,12 +583,6 @@ app.post('/bookings', verifyToken, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Service is currently unavailable' });
     }
-    const subscription = await client.query('SELECT * FROM subscriptions WHERE user_id = $1 FOR UPDATE', [req.userId]);
-    const current = subscription.rows[0] || { booking_limit: 10, monthly_bookings: 0 };
-    if (current.monthly_bookings >= current.booking_limit) {
-      await client.query('ROLLBACK');
-      return res.status(403).json({ error: 'Monthly booking limit reached', plan: current.plan || 'free' });
-    }
     const service = serviceResult.rows[0];
     const bookingId = uuidv4();
     await client.query(
@@ -597,12 +591,6 @@ app.post('/bookings', verifyToken, async (req, res) => {
       [bookingId, req.userId, service_id, booking_date, booking_time, address, city, latitude || null, longitude || null]
     );
     await client.query('UPDATE services SET available_count = available_count - 1 WHERE id = $1', [service_id]);
-    await client.query(
-      `INSERT INTO subscriptions (id, user_id, plan, booking_limit, monthly_bookings, renewal_price)
-       VALUES ($1, $2, 'free', 10, 1, 0)
-       ON CONFLICT (user_id) DO UPDATE SET monthly_bookings = subscriptions.monthly_bookings + 1`,
-      [uuidv4(), req.userId]
-    );
     await client.query(
       `INSERT INTO booking_confirmations (id, booking_id, user_id, email_sent, sent_at) VALUES ($1, $2, $3, false, NULL)`,
       [uuidv4(), bookingId, req.userId]

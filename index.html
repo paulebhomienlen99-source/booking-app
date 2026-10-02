@@ -207,7 +207,7 @@
 
       <div class="card">
       </div>
-    </div>      <div class="card" style="margin-top: 20px;"><h3 style="color: #667eea; margin-bottom: 10px;">Subscription</h3><p id="subscriptionStatus">Loading subscription...</p><div id="subscriptionPlans" style="margin-top: 10px;"></div></div>
+    </div>
   </div>
 
   <script>
@@ -344,8 +344,6 @@
       loadServices();
       loadEarnings();
       loadPaymentHistory();
-      loadSubscriptionPlans();
-      loadCurrentSubscription();
       loadBookings();
       setInterval(loadBookings, 5000);
     }
@@ -768,33 +766,6 @@
       }
     }
 
-    async function loadSubscriptionPlans() {
-      const res = await fetch(`${API}/subscriptions/plans`);
-      const plans = await res.json();
-      const container = document.getElementById('subscriptionPlans');
-      if (!container) return;
-      container.innerHTML = plans.map(p => `<button onclick="upgradePlan('${p.id}')" style="margin: 5px;">${p.name} · ${p.booking_limit} bookings · $${p.renewal_price}/month</button>`).join('');
-    }
-    async function loadCurrentSubscription() {
-      const res = await fetch(`${API}/subscriptions/me`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return;
-      const subscription = await res.json();
-      const status = document.getElementById('subscriptionStatus');
-      if (status) status.textContent = `${subscription.plan.toUpperCase()} · ${subscription.monthly_bookings}/${subscription.booking_limit} bookings this month`;
-    }
-    async function upgradePlan(planId) {
-      if (planId === 'free') return;
-      const res = await fetch(`${API}/subscriptions/upgrade`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId })
-      });
-      const data = await res.json();
-      if (!res.ok) return alert(data.error || 'Subscription upgrade failed');
-      alert(`Subscription upgraded to ${data.plan}`);
-      loadCurrentSubscription();
-    }
-
     function switchPage(page) {
       document.getElementById('bookingSection').classList.toggle('hidden', page !== 'bookings');
       document.getElementById('dashboardSection').classList.toggle('hidden', page !== 'dashboard');
@@ -1056,33 +1027,6 @@
       } catch (err) {
         alert('Error: ' + err.message);
       }
-    }
-
-    async function loadSubscriptionPlans() {
-      const res = await fetch(`${API}/subscriptions/plans`);
-      const plans = await res.json();
-      const container = document.getElementById('subscriptionPlans');
-      if (!container) return;
-      container.innerHTML = plans.map(p => `<button onclick="upgradePlan('${p.id}')" style="margin: 5px;">${p.name} · ${p.booking_limit} bookings · $${p.renewal_price}/month</button>`).join('');
-    }
-    async function loadCurrentSubscription() {
-      const res = await fetch(`${API}/subscriptions/me`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return;
-      const subscription = await res.json();
-      const status = document.getElementById('subscriptionStatus');
-      if (status) status.textContent = `${subscription.plan.toUpperCase()} · ${subscription.monthly_bookings}/${subscription.booking_limit} bookings this month`;
-    }
-    async function upgradePlan(planId) {
-      if (planId === 'free') return;
-      const res = await fetch(`${API}/subscriptions/upgrade`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId })
-      });
-      const data = await res.json();
-      if (!res.ok) return alert(data.error || 'Subscription upgrade failed');
-      alert(`Subscription upgraded to ${data.plan}`);
-      loadCurrentSubscription();
     }
 
     function switchPage(page) {
