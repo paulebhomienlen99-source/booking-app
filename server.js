@@ -529,33 +529,89 @@ app.delete('/provider-availability/:avail_id', verifyToken, async (req, res) => 
   }
 });
 
+app.get('/services/:service_id/quote', async (req, res) => {
+  try {
+    const result = await client.query(
+      `SELECT id, name, price, availability_status, available_count
+       FROM services WHERE id = $1`,
+      [req.params.service_id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Service not found' });
+    const service = result.rows[0];
+    const servicePrice = Number(service.price);
+    const commission = Number((servicePrice * 0.20).toFixed(2));
+    res.json({ ...service, service_price: servicePrice, commission, total: Number((servicePrice + commission).toFixed(2)), available: service.availability_status === 'available' && service.available_count > 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/bookings/:id/confirmation', verifyToken, async (req, res) => {
+  try {
+    const result = await client.query(
+      `SELECT b.id, b.booking_date, b.booking_time, b.address, b.city, b.status,
+              s.name AS service_name, s.price, u.name AS customer_name,
+              bc.email_sent, bc.sent_at
+       FROM bookings b JOIN services s ON s.id = b.service_id JOIN users u ON u.id = b.user_id
+       LEFT JOIN booking_confirmations bc ON bc.booking_id = b.id
+       WHERE b.id = $1 AND b.user_id = $2`,
+      [req.params.id, req.userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Booking not found' });
+    const booking = result.rows[0];
+    const servicePrice = Number(booking.price);
+    res.json({ ...booking, service_price: servicePrice, commission: Number((servicePrice * 0.20).toFixed(2)), total: Number((servicePrice * 1.20).toFixed(2)) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/bookings', verifyToken, async (req, res) => {
   const { service_id, booking_date, booking_time, address, city, latitude, longitude } = req.body;
   if (!service_id || !booking_date || !booking_time || !address || !city) {
     return res.status(400).json({ error: 'Service, date, time, address, and city are required' });
   }
   try {
-    const service = await client.query('SELECT id, name, price, city FROM services WHERE id = $1', [service_id]);
-    if (service.rows.length === 0) return res.status(404).json({ error: 'Service not found' });
-    const subscription = await client.query('SELECT * FROM subscriptions WHERE user_id = $1', [req.userId]);
+    await client.query('BEGIN');
+    const serviceResult = await client.query(
+      `SELECT id, name, price, city FROM services
+       WHERE id = $1 AND availability_status = 'available' AND available_count > 0
+       FOR UPDATE`,
+      [service_id]
+    );
+    if (!serviceResult.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Service is currently unavailable' });
+    }
+    const subscription = await client.query('SELECT * FROM subscriptions WHERE user_id = $1 FOR UPDATE', [req.userId]);
     const current = subscription.rows[0] || { booking_limit: 10, monthly_bookings: 0 };
     if (current.monthly_bookings >= current.booking_limit) {
+      await client.query('ROLLBACK');
       return res.status(403).json({ error: 'Monthly booking limit reached', plan: current.plan || 'free' });
     }
+    const service = serviceResult.rows[0];
     const bookingId = uuidv4();
     await client.query(
       `INSERT INTO bookings (id, user_id, service_id, booking_date, booking_time, address, city, latitude, longitude)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [bookingId, req.userId, service_id, booking_date, booking_time, address, city, latitude || null, longitude || null]
     );
+    await client.query('UPDATE services SET available_count = available_count - 1 WHERE id = $1', [service_id]);
     await client.query(
       `INSERT INTO subscriptions (id, user_id, plan, booking_limit, monthly_bookings, renewal_price)
        VALUES ($1, $2, 'free', 10, 1, 0)
        ON CONFLICT (user_id) DO UPDATE SET monthly_bookings = subscriptions.monthly_bookings + 1`,
       [uuidv4(), req.userId]
     );
-    res.status(201).json({ id: bookingId, price: service.rows[0].price, service_name: service.rows[0].name, status: 'pending' });
+    await client.query(
+      `INSERT INTO booking_confirmations (id, booking_id, user_id, email_sent, sent_at) VALUES ($1, $2, $3, false, NULL)`,
+      [uuidv4(), bookingId, req.userId]
+    );
+    await client.query('COMMIT');
+    const servicePrice = Number(service.price);
+    res.status(201).json({ id: bookingId, service_name: service.name, service_price: servicePrice, commission: Number((servicePrice * 0.20).toFixed(2)), total: Number((servicePrice * 1.20).toFixed(2)), status: 'pending', confirmation: `/bookings/${bookingId}/confirmation` });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => null);
     console.error('Booking creation error:', err);
     res.status(500).json({ error: err.message });
   }
