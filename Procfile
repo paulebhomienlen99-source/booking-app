@@ -1,2 +1,2 @@
 web: npm start
-release: npm run migrate 2>/dev/null || true
+release: node add-services.js
