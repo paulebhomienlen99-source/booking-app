@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "seed-services": "node add-services.js"
   },
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.1",

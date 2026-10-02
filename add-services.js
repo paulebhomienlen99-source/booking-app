@@ -1,7 +1,10 @@
 ﻿const { Client } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 
-const client = new Client({ connectionString: process.env.DATABASE_URL });
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DYNO ? { rejectUnauthorized: false } : false
+});
 
 const newServices = [
   // Japan Services
