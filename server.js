@@ -159,6 +159,31 @@ app.post('/provider/register', verifyToken, async (req, res) => {
   }
 });
 
+app.get('/provider/verification-status', verifyToken, async (req, res) => {
+  try {
+    const result = await client.query('SELECT is_provider, verification_status, verified_at, verification_notes FROM users WHERE id = $1', [req.userId]);
+    res.json(result.rows[0] || { is_provider: false, verification_status: 'unverified' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/admin/providers', verifyAdmin, async (req, res) => {
+  try {
+    const result = await client.query(`SELECT id, name, email, phone, bio, is_provider, verification_status, verified_at, verification_notes FROM users WHERE is_provider = true ORDER BY created_at DESC`);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/admin/providers/:id/verification', verifyAdmin, async (req, res) => {
+  const { status, notes } = req.body;
+  if (!['pending', 'verified', 'rejected', 'unverified'].includes(status)) return res.status(400).json({ error: 'Invalid verification status' });
+  try {
+    const result = await client.query(`UPDATE users SET verification_status = $1, verified_at = CASE WHEN $1 = 'verified' THEN CURRENT_TIMESTAMP ELSE NULL END, verification_notes = $2 WHERE id = $3 AND is_provider = true RETURNING id, name, email, verification_status, verified_at, verification_notes`, [status, notes || null, req.params.id]);
+    if (!result.rows.length) return res.status(404).json({ error: 'Provider not found' });
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
 app.get('/provider/:provider_id', async (req, res) => {
   try {
     const result = await client.query(
@@ -345,10 +370,14 @@ async function initDB() {
     
     await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, phone VARCHAR(20), bio TEXT, profile_image VARCHAR(500), rating DECIMAL(3,2) DEFAULT 0, total_reviews INT DEFAULT 0, is_provider BOOLEAN DEFAULT false, reset_token VARCHAR(255), reset_token_expires TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     console.log('âœ“ Users table created with provider fields');
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unverified'`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_notes TEXT`);
     
     await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, provider_id UUID REFERENCES users(id), name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, country VARCHAR(100), city VARCHAR(100), availability_status VARCHAR(50) DEFAULT 'available', available_count INT DEFAULT 999, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS availability_status VARCHAR(50) DEFAULT 'available'`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS available_count INT DEFAULT 999`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS verification_required BOOLEAN DEFAULT true`);
     console.log('âœ“ Services table created with provider_id');
     
     await client.query(`CREATE TABLE IF NOT EXISTS notifications (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), type VARCHAR(50), title VARCHAR(255), message TEXT, read BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
@@ -1435,7 +1464,9 @@ app.delete('/admin/availability-slots/:id', verifyAdmin, async (req, res) => {
 app.get('/services', async (req, res) => {
   try {
     const result = await client.query(`
-      SELECT id, name, description, price, country, city, availability_status
+      SELECT id, name, description, price, country, city, availability_status,
+             COALESCE((SELECT verification_status FROM users WHERE users.id = services.provider_id), 'unverified') AS provider_verification_status,
+             COALESCE((SELECT verification_status FROM users WHERE users.id = services.provider_id), 'unverified') AS provider_verification_status
       FROM services
       ORDER BY country, city, name
     `);
