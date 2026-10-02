@@ -1333,6 +1333,7 @@ app.post('/provider-integrations/hotels/reservations', verifyToken, async (req, 
 });
 
 
+app.get('/services', async (req, res) => {
   try {
     const result = await client.query(`
       SELECT id, name, description, price, country, city, availability_status
