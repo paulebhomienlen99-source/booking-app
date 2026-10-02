@@ -82,8 +82,7 @@ async function addServices() {
       await client.query(
         `INSERT INTO services (id, name, description, category, duration_minutes, price, country, city)
        SELECT $1, $2, $3, $4, $5, $6, $7, $8
-       WHERE NOT EXISTS (SELECT 1 FROM services WHERE name = $2 AND country = $7 AND city = $8)`,
-        [uuidv4(), service.name, service.desc, service.cat, service.dur, service.price, service.country, service.city]
+       WHERE NOT EXISTS (SELECT 1 FROM services WHERE name = $2::VARCHAR AND country = $7::VARCHAR AND city = $8::VARCHAR)`,        [uuidv4(), service.name, service.desc, service.cat, service.dur, service.price, service.country, service.city]
       );
       added++;
     }
