@@ -376,6 +376,10 @@ async function initDB() {
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS buffer_minutes INT DEFAULT 0`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS buffer_minutes INT DEFAULT 15`);
     await client.query(`CREATE TABLE IF NOT EXISTS availability_slots (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, provider_id UUID REFERENCES users(id) ON DELETE SET NULL, slot_date DATE NOT NULL, start_time TIME NOT NULL, end_time TIME NOT NULL, timezone VARCHAR(100) DEFAULT 'UTC', capacity INT DEFAULT 1, active BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS recurring_schedules (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, provider_id UUID REFERENCES users(id) ON DELETE SET NULL, weekday INT NOT NULL CHECK (weekday BETWEEN 0 AND 6), start_time TIME NOT NULL, end_time TIME NOT NULL, slot_minutes INT DEFAULT 60, buffer_minutes INT DEFAULT 15, timezone VARCHAR(100) DEFAULT 'UTC', valid_from DATE NOT NULL, valid_until DATE, capacity INT DEFAULT 1, active BOOLEAN DEFAULT true)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS schedule_breaks (id UUID PRIMARY KEY, schedule_id UUID NOT NULL REFERENCES recurring_schedules(id) ON DELETE CASCADE, break_start TIME NOT NULL, break_end TIME NOT NULL)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS schedule_exceptions (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, exception_date DATE NOT NULL, closed BOOLEAN DEFAULT true, start_time TIME, end_time TIME)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS recurring_schedule_lookup ON recurring_schedules(service_id, weekday, valid_from, active)`);
     await client.query(`CREATE INDEX IF NOT EXISTS availability_slots_lookup ON availability_slots(service_id, slot_date, start_time)`);
     console.log('âœ“ Provider availability table created');
     
@@ -1350,6 +1354,47 @@ app.post('/provider-integrations/hotels/reservations', verifyToken, async (req, 
 });
 
 
+app.post('/admin/recurring-schedules', verifyAdmin, async (req, res) => {
+  const { service_id, provider_id, weekday, start_time, end_time, slot_minutes = 60, buffer_minutes = 15, timezone = 'UTC', valid_from, valid_until, capacity = 1, breaks = [] } = req.body;
+  if (!service_id || weekday === undefined || !start_time || !end_time || !valid_from) return res.status(400).json({ error: 'service_id, weekday, start_time, end_time, and valid_from are required' });
+  try {
+    await client.query('BEGIN');
+    const schedule = await client.query(`INSERT INTO recurring_schedules (id, service_id, provider_id, weekday, start_time, end_time, slot_minutes, buffer_minutes, timezone, valid_from, valid_until, capacity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`, [uuidv4(), service_id, provider_id || null, weekday, start_time, end_time, slot_minutes, buffer_minutes, timezone, valid_from, valid_until || null, capacity]);
+    for (const item of breaks) await client.query('INSERT INTO schedule_breaks (id, schedule_id, break_start, break_end) VALUES ($1,$2,$3,$4)', [uuidv4(), schedule.rows[0].id, item.start, item.end]);
+    await client.query('COMMIT');
+    res.status(201).json(schedule.rows[0]);
+  } catch (err) { await client.query('ROLLBACK').catch(() => null); res.status(500).json({ error: err.message }); }
+});
+
+app.post('/admin/schedule-exceptions', verifyAdmin, async (req, res) => {
+  const { service_id, exception_date, closed = true, start_time, end_time } = req.body;
+  try {
+    const result = await client.query('INSERT INTO schedule_exceptions (id, service_id, exception_date, closed, start_time, end_time) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', [uuidv4(), service_id, exception_date, closed, start_time || null, end_time || null]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/admin/availability-slots/generate', verifyAdmin, async (req, res) => {
+  const { service_id, from, to } = req.body;
+  if (!service_id || !from || !to) return res.status(400).json({ error: 'service_id, from, and to are required' });
+  try {
+    const schedules = await client.query('SELECT * FROM recurring_schedules WHERE service_id = $1 AND active = true', [service_id]);
+    const breaks = await client.query('SELECT b.* FROM schedule_breaks b JOIN recurring_schedules s ON s.id = b.schedule_id WHERE s.service_id = $1', [service_id]);
+    const exceptions = await client.query('SELECT * FROM schedule_exceptions WHERE service_id = $1 AND exception_date BETWEEN $2 AND $3', [service_id, from, to]);
+    let created = 0; const start = new Date(`${from}T00:00:00Z`); const end = new Date(`${to}T00:00:00Z`);
+    for (let day = new Date(start); day <= end; day.setUTCDate(day.getUTCDate() + 1)) {
+      const date = day.toISOString().slice(0, 10); const weekday = day.getUTCDay();
+      const exception = exceptions.rows.find(x => String(x.exception_date).slice(0, 10) === date);
+      if (exception?.closed) continue;
+      for (const schedule of schedules.rows.filter(x => x.weekday === weekday && date >= String(x.valid_from).slice(0, 10) && (!x.valid_until || date <= String(x.valid_until).slice(0, 10)))) {
+        const [sh, sm] = String(schedule.start_time).split(':').map(Number); const [eh, em] = String(schedule.end_time).split(':').map(Number); const [slot, step] = [new Date(Date.UTC(1970,0,1,sh,sm)), (Number(schedule.slot_minutes) + Number(schedule.buffer_minutes)) * 60000];
+        const finish = new Date(Date.UTC(1970,0,1,eh,em));
+        for (; slot < finish; slot.setTime(slot.getTime() + step)) { const endSlot = new Date(slot.getTime() + Number(schedule.slot_minutes) * 60000); if (endSlot > finish) break; const st = slot.toISOString().slice(11,19); const et = endSlot.toISOString().slice(11,19); const blocked = breaks.rows.some(b => b.schedule_id === schedule.id && st < b.break_end && et > b.break_start); if (blocked) continue; const exists = await client.query('SELECT 1 FROM availability_slots WHERE service_id=$1 AND slot_date=$2 AND start_time=$3', [service_id, date, st]); if (!exists.rows.length) { await client.query('INSERT INTO availability_slots (id,service_id,provider_id,slot_date,start_time,end_time,timezone,capacity) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [uuidv4(), service_id, schedule.provider_id, date, st, et, schedule.timezone, schedule.capacity]); created++; } }
+      }
+    }
+    res.json({ created, from, to });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 app.get('/availability/:service_id', async (req, res) => {
   const { from, to } = req.query;
   try {
