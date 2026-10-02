@@ -372,6 +372,11 @@ async function initDB() {
     console.log('âœ“ Service ratings table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS provider_availability (id UUID PRIMARY KEY, provider_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, date DATE NOT NULL, start_time TIME NOT NULL, end_time TIME NOT NULL, is_available BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS timezone VARCHAR(100) DEFAULT 'UTC'`);
+    await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS buffer_minutes INT DEFAULT 0`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS buffer_minutes INT DEFAULT 15`);
+    await client.query(`CREATE TABLE IF NOT EXISTS availability_slots (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, provider_id UUID REFERENCES users(id) ON DELETE SET NULL, slot_date DATE NOT NULL, start_time TIME NOT NULL, end_time TIME NOT NULL, timezone VARCHAR(100) DEFAULT 'UTC', capacity INT DEFAULT 1, active BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS availability_slots_lookup ON availability_slots(service_id, slot_date, start_time)`);
     console.log('âœ“ Provider availability table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS booking_confirmations (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, email_sent BOOLEAN DEFAULT false, sent_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
@@ -583,6 +588,18 @@ app.post('/bookings', verifyToken, async (req, res) => {
     if (!serviceResult.rows.length) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Service is currently unavailable' });
+    }
+    const conflict = await client.query(
+      `SELECT b.id FROM bookings b JOIN services s ON s.id = b.service_id
+       WHERE b.service_id = $1 AND b.booking_date = $2 AND b.status IN ('pending','confirmed')
+       AND b.booking_time < ($4::time + (s.duration_minutes + s.buffer_minutes) * interval '1 minute')
+       AND (b.booking_time + (s.duration_minutes + s.buffer_minutes) * interval '1 minute') > $3::time
+       FOR UPDATE`,
+      [service_id, booking_date, booking_time, booking_time]
+    );
+    if (conflict.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'This time conflicts with an existing reservation' });
     }
     const service = serviceResult.rows[0];
     const bookingId = uuidv4();
@@ -1332,6 +1349,43 @@ app.post('/provider-integrations/hotels/reservations', verifyToken, async (req, 
   }
 });
 
+
+app.get('/availability/:service_id', async (req, res) => {
+  const { from, to } = req.query;
+  try {
+    const result = await client.query(
+      `SELECT s.id, s.slot_date, s.start_time, s.end_time, s.timezone, s.capacity,
+              s.capacity - COUNT(b.id) FILTER (WHERE b.status IN ('pending','confirmed')) AS remaining
+       FROM availability_slots s LEFT JOIN bookings b ON b.service_id = s.service_id
+       AND b.booking_date = s.slot_date AND b.booking_time >= s.start_time AND b.booking_time < s.end_time
+       WHERE s.service_id = $1 AND s.active = true
+       AND ($2::date IS NULL OR s.slot_date >= $2::date) AND ($3::date IS NULL OR s.slot_date <= $3::date)
+       GROUP BY s.id ORDER BY s.slot_date, s.start_time`,
+      [req.params.service_id, from || null, to || null]
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/admin/availability-slots', verifyAdmin, async (req, res) => {
+  const { service_id, provider_id, slot_date, start_time, end_time, timezone = 'UTC', capacity = 1 } = req.body;
+  if (!service_id || !slot_date || !start_time || !end_time) return res.status(400).json({ error: 'service_id, slot_date, start_time, and end_time are required' });
+  try {
+    const result = await client.query(
+      `INSERT INTO availability_slots (id, service_id, provider_id, slot_date, start_time, end_time, timezone, capacity)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [uuidv4(), service_id, provider_id || null, slot_date, start_time, end_time, timezone, Math.max(1, Number(capacity))]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/admin/availability-slots/:id', verifyAdmin, async (req, res) => {
+  try {
+    await client.query('UPDATE availability_slots SET active = false WHERE id = $1', [req.params.id]);
+    res.json({ message: 'Availability slot disabled' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 app.get('/services', async (req, res) => {
   try {
