@@ -8,6 +8,7 @@ const paypal = require('@paypal/checkout-server-sdk');
 const nodemailer = require('nodemailer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const twilio = require('twilio');
+const { providerConfig, searchHotels, createHotelReservation } = require('./provider-adapter');
 require('dotenv').config();
 
 const app = express();
@@ -1309,7 +1310,29 @@ app.get('/cities', async (req, res) => {
   }
 });
 
-app.get('/services', async (req, res) => {
+app.get('/provider-integrations/status', (req, res) => {
+  res.json({ hotels: { enabled: providerConfig.enabled, provider: 'hotel-adapter' } });
+});
+
+app.get('/provider-integrations/hotels/search', async (req, res) => {
+  const { destination, checkin, checkout, guests } = req.query;
+  if (!destination || !checkin || !checkout) return res.status(400).json({ error: 'destination, checkin, and checkout are required' });
+  try {
+    res.json(await searchHotels({ destination, checkin, checkout, guests }));
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+app.post('/provider-integrations/hotels/reservations', verifyToken, async (req, res) => {
+  try {
+    res.json(await createHotelReservation({ ...req.body, customer_id: req.userId }));
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+
   try {
     const result = await client.query(`
       SELECT id, name, description, price, country, city, availability_status
