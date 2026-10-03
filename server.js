@@ -389,7 +389,7 @@ if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
     : new paypal.core.SandboxEnvironment(clientId, clientSecret);
   
   paypalClient = new paypal.core.PayPalHttpClient(environment);
-  console.log(`âœ“ PayPal client initialized (${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'SANDBOX'})`);
+  console.log(`✓ PayPal client initialized (${process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'SANDBOX'})`);
 }
 
 const client = new Client({
@@ -405,7 +405,7 @@ async function initDB() {
     console.log('Starting database initialization...');
     
     await client.query(`CREATE TABLE IF NOT EXISTS users (id UUID PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, password_hash VARCHAR(255) NOT NULL, name VARCHAR(255) NOT NULL, phone VARCHAR(20), bio TEXT, profile_image VARCHAR(500), rating DECIMAL(3,2) DEFAULT 0, total_reviews INT DEFAULT 0, is_provider BOOLEAN DEFAULT false, reset_token VARCHAR(255), reset_token_expires TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('âœ“ Users table created with provider fields');
+    console.log('✓ Users table created with provider fields');
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unverified'`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_notes TEXT`);
@@ -422,14 +422,14 @@ async function initDB() {
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS listing_type VARCHAR(20) DEFAULT 'service'`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending'`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS rental_unit VARCHAR(50) DEFAULT 'hour'`);
-    console.log('âœ“ Services table created with provider_id');
+    console.log('✓ Services table created with provider_id');
     
     await client.query(`CREATE TABLE IF NOT EXISTS notifications (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), type VARCHAR(50), title VARCHAR(255), message TEXT, read BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('âœ“ Notifications table created');
+    console.log('✓ Notifications table created');
     
     
     await client.query(`CREATE TABLE IF NOT EXISTS cities (id UUID PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE, country VARCHAR(100) NOT NULL, region VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8))`);
-    console.log('âœ“ Cities table created');
+    console.log('✓ Cities table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS bookings (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), service_id UUID NOT NULL REFERENCES services(id), booking_date DATE NOT NULL, booking_time TIME NOT NULL, address VARCHAR(255), city VARCHAR(100), latitude DECIMAL(10, 8), longitude DECIMAL(11, 8), user_latitude DECIMAL(10, 8), user_longitude DECIMAL(11, 8), status VARCHAR(50) DEFAULT 'pending', paypal_transaction_id VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id) UNIQUE, plan VARCHAR(50) DEFAULT 'free', booking_limit INT DEFAULT 10, monthly_bookings INT DEFAULT 0, subscription_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, next_reset TIMESTAMP DEFAULT CURRENT_TIMESTAMP + INTERVAL '1 month', renewal_price DECIMAL(10, 2), auto_renew BOOLEAN DEFAULT true, paypal_subscription_id VARCHAR(255))`);
@@ -439,10 +439,10 @@ async function initDB() {
     
     // New tables for enhanced features
     await client.query(`CREATE TABLE IF NOT EXISTS service_images (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, image_url TEXT NOT NULL, alt_text VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('âœ“ Service images table created');
+    console.log('✓ Service images table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS service_ratings (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5), comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('âœ“ Service ratings table created');
+    console.log('✓ Service ratings table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS provider_availability (id UUID PRIMARY KEY, provider_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, date DATE NOT NULL, start_time TIME NOT NULL, end_time TIME NOT NULL, is_available BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS timezone VARCHAR(100) DEFAULT 'UTC'`);
@@ -453,24 +453,20 @@ async function initDB() {
     await client.query(`CREATE TABLE IF NOT EXISTS schedule_breaks (id UUID PRIMARY KEY, schedule_id UUID NOT NULL REFERENCES recurring_schedules(id) ON DELETE CASCADE, break_start TIME NOT NULL, break_end TIME NOT NULL)`);
     await client.query(`CREATE TABLE IF NOT EXISTS schedule_exceptions (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, exception_date DATE NOT NULL, closed BOOLEAN DEFAULT true, start_time TIME, end_time TIME)`);
     await client.query(`CREATE INDEX IF NOT EXISTS recurring_schedule_lookup ON recurring_schedules(service_id, weekday, valid_from, active)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS booking_resources (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, name VARCHAR(255) NOT NULL, resource_type VARCHAR(50) DEFAULT 'staff', capacity INT DEFAULT 1, timezone VARCHAR(100) DEFAULT 'UTC', active BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await client.query(`CREATE TABLE IF NOT EXISTS resource_holidays (id UUID PRIMARY KEY, resource_id UUID NOT NULL REFERENCES booking_resources(id) ON DELETE CASCADE, holiday_date DATE NOT NULL, reason VARCHAR(255), UNIQUE(resource_id, holiday_date))`);
-    await client.query(`ALTER TABLE availability_slots ADD COLUMN IF NOT EXISTS resource_id UUID REFERENCES booking_resources(id) ON DELETE CASCADE`);
-    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS availability_resource_slot_unique ON availability_slots(resource_id, slot_date, start_time) WHERE active = true`);
-    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS booking_resource_time_unique ON bookings(service_id, booking_date, booking_time, status) WHERE status IN ('pending','confirmed')`);
-    console.log('âœ“ Provider availability table created');
+    await client.query(`CREATE INDEX IF NOT EXISTS availability_slots_lookup ON availability_slots(service_id, slot_date, start_time)`);
+    console.log('✓ Provider availability table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS booking_confirmations (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, email_sent BOOLEAN DEFAULT false, sent_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    console.log('âœ“ Booking confirmations table created');
+    console.log('✓ Booking confirmations table created');
     
         await client.query(`CREATE TABLE IF NOT EXISTS reviews (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, booking_id UUID REFERENCES bookings(id) ON DELETE SET NULL, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5), review_text TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     console.log('Reviews table created');
     
     // Initialize earnings tracker
     await client.query(`INSERT INTO earnings (id) SELECT '00000000-0000-0000-0000-000000000000' WHERE NOT EXISTS (SELECT 1 FROM earnings)`);
-    console.log('âœ“ Subscriptions, payments, and earnings tables created');
-    console.log('âœ“ Admin users table created');
-    console.log('âœ“ Bookings table created');
+    console.log('✓ Subscriptions, payments, and earnings tables created');
+    console.log('✓ Admin users table created');
+    console.log('✓ Bookings table created');
     
     console.log('Database initialization complete!');
   } catch (err) {
@@ -817,7 +813,7 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
         
         // Send email receipt
         const emailHTML = `
-          <h2>ðŸ“§ Payment Receipt - BookHub</h2>
+          <h2>📧 Payment Receipt - BookHub</h2>
           <p>Hello <strong>${booking.name}</strong>,</p>
           <p>Your payment has been successfully processed!</p>
           <hr>
@@ -832,7 +828,7 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
             <li><strong>Total Paid:</strong> $${(parseFloat(booking.price) + commission).toFixed(2)}</li>
           </ul>
           <hr>
-          <p><strong>Status:</strong> âœ… Payment Completed</p>
+          <p><strong>Status:</strong> ✅ Payment Completed</p>
           <p>Order ID: ${booking_id}</p>
           <p>PayPal Transaction ID: ${order_id}</p>
           <hr>
@@ -846,7 +842,7 @@ app.post('/payments/paypal/capture-order', verifyToken, async (req, res) => {
         await sendNotification(
           req.userId,
           'booking_confirmed',
-          'ðŸŽ‰ Booking Confirmed!',
+          '🎉 Booking Confirmed!',
           `Your booking for ${booking.service_name} on ${booking.booking_date} has been confirmed. Payment successful!`
         );
       }
@@ -931,7 +927,7 @@ app.post('/payments/stripe/confirm-payment', verifyToken, async (req, res) => {
     
     // Send email receipt
     const emailHTML = `
-      <h2>ðŸ“§ Payment Receipt - BookHub</h2>
+      <h2>📧 Payment Receipt - BookHub</h2>
       <p>Hello <strong>${booking.name}</strong>,</p>
       <p>Your payment has been successfully processed!</p>
       <hr>
@@ -946,8 +942,8 @@ app.post('/payments/stripe/confirm-payment', verifyToken, async (req, res) => {
         <li><strong>Total Paid:</strong> $${totalPaid.toFixed(2)}</li>
       </ul>
       <hr>
-      <p><strong>Status:</strong> âœ… Payment Completed</p>
-      <p>Payment Method: ðŸ’³ Stripe Card Payment</p>
+      <p><strong>Status:</strong> ✅ Payment Completed</p>
+      <p>Payment Method: 💳 Stripe Card Payment</p>
       <p>Transaction ID: ${paymentIntent.charges.data[0].id}</p>
       <hr>
       <p>Thank you for booking with BookHub!</p>
@@ -1294,13 +1290,13 @@ app.post('/admin/reset-services', async (req, res) => {
     // Add country and city columns if they don't exist
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS country VARCHAR(100)`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-    console.log('âœ“ Columns added');
+    console.log('✓ Columns added');
     
     // Delete all bookings and payments first (cascade)
     await client.query('DELETE FROM payments');
     await client.query('DELETE FROM bookings');
     await client.query('DELETE FROM services');
-    console.log('âœ“ Old services, bookings, and payments deleted');
+    console.log('✓ Old services, bookings, and payments deleted');
     // Insert new country-specific services
     await client.query(`INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES 
       ('550e8400-e29b-41d4-a716-446655440001', 'Haircut', 'Professional haircut service', 'beauty', 30, 25.00, 'Italy', 'Rome'),
@@ -1372,7 +1368,7 @@ app.post('/admin/reset-services', async (req, res) => {
       ('550e8400-e29b-41d4-a716-446655440600', 'Flamenco Lesson', 'Traditional flamenco dance class', 'entertainment', 90, 50.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440601', 'Paella Cooking Class', 'Learn authentic Spanish paella', 'food', 120, 60.00, 'Spain', 'Valencia'),
       ('550e8400-e29b-41d4-a716-446655440602', 'Sagrada Familia Tour', 'Guided Barcelona cathedral tour', 'tour', 120, 80.00, 'Spain', 'Barcelona'),
-      ('550e8400-e29b-41d4-a716-446655440603', 'Park GÃ¼ell Tour', 'Guided GaudÃ­ park experience', 'tour', 180, 95.00, 'Spain', 'Barcelona'),
+      ('550e8400-e29b-41d4-a716-446655440603', 'Park Güell Tour', 'Guided Gaudí park experience', 'tour', 180, 95.00, 'Spain', 'Barcelona'),
       ('550e8400-e29b-41d4-a716-446655440604', 'Spanish Guitar Lesson', 'Professional guitar instruction', 'freelance', 60, 55.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440605', 'Prado Museum Tour', 'Private art museum tour', 'tour', 180, 100.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440606', 'Tapas Food Tour', 'Spanish tapas tasting tour', 'food', 180, 70.00, 'Spain', 'Barcelona'),
@@ -1473,24 +1469,7 @@ app.post('/admin/availability-slots/generate', verifyAdmin, async (req, res) => 
     res.json({ created, from, to });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-app.post('/admin/resources', verifyAdmin, async (req, res) => {
-  const { service_id, name, resource_type = 'staff', capacity = 1, timezone = 'UTC' } = req.body;
-  try { const result = await client.query('INSERT INTO booking_resources (id, service_id, name, resource_type, capacity, timezone) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', [uuidv4(), service_id, name, resource_type, capacity, timezone]); res.status(201).json(result.rows[0]); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/services/:service_id/resources', async (req, res) => {
-  try { res.json((await client.query('SELECT * FROM booking_resources WHERE service_id=$1 AND active=true ORDER BY name', [req.params.service_id])).rows); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/admin/resources/:id/holidays', verifyAdmin, async (req, res) => {
-  const { holiday_date, reason } = req.body;
-  try { const result = await client.query('INSERT INTO resource_holidays (id, resource_id, holiday_date, reason) VALUES ($1,$2,$3,$4) ON CONFLICT (resource_id, holiday_date) DO UPDATE SET reason=EXCLUDED.reason RETURNING *', [uuidv4(), req.params.id, holiday_date, reason || null]); res.status(201).json(result.rows[0]); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-
+app.get('/availability/:service_id', async (req, res) => {
   const { from, to } = req.query;
   try {
     const result = await client.query(
@@ -1755,7 +1734,7 @@ app.post('/withdrawals/:id/process', async (req, res) => {
   const { transactionId } = req.body;
   try {
     const txId = transactionId || 'TX_' + Date.now();
-    const approvalEmail = `<h2>Withdrawal Approved! âœ…</h2><p>Your withdrawal has been processed.</p><p><strong>Transaction ID:</strong> ${txId}</p><p>The funds will arrive in your PayPal account within 24-48 hours.</p>`;
+    const approvalEmail = `<h2>Withdrawal Approved! ✅</h2><p>Your withdrawal has been processed.</p><p><strong>Transaction ID:</strong> ${txId}</p><p>The funds will arrive in your PayPal account within 24-48 hours.</p>`;
     await sendEmail(process.env.EMAIL_USER, 'Withdrawal Approved', approvalEmail).catch(() => null);
     res.json({ message: 'Withdrawal approved! Email sent to admin.', transactionId: txId, status: 'approved' });
   } catch (err) {
@@ -1767,7 +1746,7 @@ app.post('/withdrawals/:id/reject', async (req, res) => {
   const { id } = req.params;
   const { notes } = req.body;
   try {
-    const rejectEmail = `<h2>Withdrawal Rejected âŒ</h2><p>Your withdrawal request has been rejected.</p><p><strong>Reason:</strong> ${notes || 'Not specified'}</p><p>Please contact support for more information.</p>`;
+    const rejectEmail = `<h2>Withdrawal Rejected ❌</h2><p>Your withdrawal request has been rejected.</p><p><strong>Reason:</strong> ${notes || 'Not specified'}</p><p>Please contact support for more information.</p>`;
     await sendEmail(process.env.EMAIL_USER, 'Withdrawal Rejected', rejectEmail).catch(() => null);
     res.json({ message: 'Withdrawal rejected. Email notification sent.', status: 'rejected' });
   } catch (err) {
@@ -1787,7 +1766,7 @@ app.get('/withdrawals/history', async (req, res) => {
 });
 
 
-app.get('/admin/reseed-bologna', async (req, res) => { try { await client.query('DELETE FROM services WHERE city = ', ['Bologna']); const services = [{id: '550e8400-e29b-41d4-a716-446655440500', name: 'Tagliatelle al Ragù Cooking Class', desc: 'Learn traditional Bolognese pasta', cat: 'food', dur: 120, price: 85}, {id: '550e8400-e29b-41d4-a716-446655440501', name: 'Tortellini Making', desc: 'Handmade tortellini', cat: 'food', dur: 120, price: 80}, {id: '550e8400-e29b-41d4-a716-446655440502', name: 'Mortadella Tasting', desc: 'Authentic mortadella', cat: 'food', dur: 90, price: 65}, {id: '550e8400-e29b-41d4-a716-446655440503', name: 'Balsamic Vinegar Tour', desc: 'Vinegar makers', cat: 'tour', dur: 180, price: 95}, {id: '550e8400-e29b-41d4-a716-446655440504', name: 'Bologna Walking Tour', desc: 'Historic Bologna', cat: 'tour', dur: 180, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440505', name: 'Parmesan Factory', desc: 'Cheese production', cat: 'tour', dur: 240, price: 110}, {id: '550e8400-e29b-41d4-a716-446655440506', name: 'Wine Tasting', desc: 'Emilia wines', cat: 'beverage', dur: 120, price: 70}, {id: '550e8400-e29b-41d4-a716-446655440507', name: 'Pasta Art', desc: 'Pasta decoration', cat: 'art', dur: 90, price: 60}, {id: '550e8400-e29b-41d4-a716-446655440508', name: 'Pizza Oven', desc: 'Wood-fired pizza', cat: 'food', dur: 120, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440509', name: 'Gelato Making', desc: 'Gelato & chocolate', cat: 'food', dur: 90, price: 70}]; for (const s of services) { await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [s.id, s.name, s.desc, s.cat, s.dur, s.price, 'Italy', 'Bologna']); } res.json({ message: '10 Bologna services added!' }); } catch (err) { res.status(500).json({ error: err.message }); } });
+app.get('/admin/reseed-bologna', async (req, res) => { try { await client.query('DELETE FROM services WHERE city = ', ['Bologna']); const services = [{id: '550e8400-e29b-41d4-a716-446655440500', name: 'Tagliatelle al Rag� Cooking Class', desc: 'Learn traditional Bolognese pasta', cat: 'food', dur: 120, price: 85}, {id: '550e8400-e29b-41d4-a716-446655440501', name: 'Tortellini Making', desc: 'Handmade tortellini', cat: 'food', dur: 120, price: 80}, {id: '550e8400-e29b-41d4-a716-446655440502', name: 'Mortadella Tasting', desc: 'Authentic mortadella', cat: 'food', dur: 90, price: 65}, {id: '550e8400-e29b-41d4-a716-446655440503', name: 'Balsamic Vinegar Tour', desc: 'Vinegar makers', cat: 'tour', dur: 180, price: 95}, {id: '550e8400-e29b-41d4-a716-446655440504', name: 'Bologna Walking Tour', desc: 'Historic Bologna', cat: 'tour', dur: 180, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440505', name: 'Parmesan Factory', desc: 'Cheese production', cat: 'tour', dur: 240, price: 110}, {id: '550e8400-e29b-41d4-a716-446655440506', name: 'Wine Tasting', desc: 'Emilia wines', cat: 'beverage', dur: 120, price: 70}, {id: '550e8400-e29b-41d4-a716-446655440507', name: 'Pasta Art', desc: 'Pasta decoration', cat: 'art', dur: 90, price: 60}, {id: '550e8400-e29b-41d4-a716-446655440508', name: 'Pizza Oven', desc: 'Wood-fired pizza', cat: 'food', dur: 120, price: 75}, {id: '550e8400-e29b-41d4-a716-446655440509', name: 'Gelato Making', desc: 'Gelato & chocolate', cat: 'food', dur: 90, price: 70}]; for (const s of services) { await client.query('INSERT INTO services (id, name, description, category, duration_minutes, price, country, city) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)', [s.id, s.name, s.desc, s.cat, s.dur, s.price, 'Italy', 'Bologna']); } res.json({ message: '10 Bologna services added!' }); } catch (err) { res.status(500).json({ error: err.message }); } });
 
 
 
