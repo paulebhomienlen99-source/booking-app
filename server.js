@@ -1508,7 +1508,6 @@ app.get('/services', async (req, res) => {
   try {
     const result = await client.query(`
       SELECT id, name, description, price, country, city, availability_status,
-             COALESCE((SELECT verification_status FROM users WHERE users.id = services.provider_id), 'unverified') AS provider_verification_status,
              COALESCE((SELECT verification_status FROM users WHERE users.id = services.provider_id), 'unverified') AS provider_verification_status
       FROM services
       ORDER BY country, city, name
