@@ -453,7 +453,11 @@ async function initDB() {
     await client.query(`CREATE TABLE IF NOT EXISTS schedule_breaks (id UUID PRIMARY KEY, schedule_id UUID NOT NULL REFERENCES recurring_schedules(id) ON DELETE CASCADE, break_start TIME NOT NULL, break_end TIME NOT NULL)`);
     await client.query(`CREATE TABLE IF NOT EXISTS schedule_exceptions (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, exception_date DATE NOT NULL, closed BOOLEAN DEFAULT true, start_time TIME, end_time TIME)`);
     await client.query(`CREATE INDEX IF NOT EXISTS recurring_schedule_lookup ON recurring_schedules(service_id, weekday, valid_from, active)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS availability_slots_lookup ON availability_slots(service_id, slot_date, start_time)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS booking_resources (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, name VARCHAR(255) NOT NULL, resource_type VARCHAR(50) DEFAULT 'staff', capacity INT DEFAULT 1, timezone VARCHAR(100) DEFAULT 'UTC', active BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS resource_holidays (id UUID PRIMARY KEY, resource_id UUID NOT NULL REFERENCES booking_resources(id) ON DELETE CASCADE, holiday_date DATE NOT NULL, reason VARCHAR(255), UNIQUE(resource_id, holiday_date))`);
+    await client.query(`ALTER TABLE availability_slots ADD COLUMN IF NOT EXISTS resource_id UUID REFERENCES booking_resources(id) ON DELETE CASCADE`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS availability_resource_slot_unique ON availability_slots(resource_id, slot_date, start_time) WHERE active = true`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS booking_resource_time_unique ON bookings(service_id, booking_date, booking_time, status) WHERE status IN ('pending','confirmed')`);
     console.log('âœ“ Provider availability table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS booking_confirmations (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, email_sent BOOLEAN DEFAULT false, sent_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
@@ -1469,7 +1473,24 @@ app.post('/admin/availability-slots/generate', verifyAdmin, async (req, res) => 
     res.json({ created, from, to });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-app.get('/availability/:service_id', async (req, res) => {
+app.post('/admin/resources', verifyAdmin, async (req, res) => {
+  const { service_id, name, resource_type = 'staff', capacity = 1, timezone = 'UTC' } = req.body;
+  try { const result = await client.query('INSERT INTO booking_resources (id, service_id, name, resource_type, capacity, timezone) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', [uuidv4(), service_id, name, resource_type, capacity, timezone]); res.status(201).json(result.rows[0]); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/services/:service_id/resources', async (req, res) => {
+  try { res.json((await client.query('SELECT * FROM booking_resources WHERE service_id=$1 AND active=true ORDER BY name', [req.params.service_id])).rows); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/admin/resources/:id/holidays', verifyAdmin, async (req, res) => {
+  const { holiday_date, reason } = req.body;
+  try { const result = await client.query('INSERT INTO resource_holidays (id, resource_id, holiday_date, reason) VALUES ($1,$2,$3,$4) ON CONFLICT (resource_id, holiday_date) DO UPDATE SET reason=EXCLUDED.reason RETURNING *', [uuidv4(), req.params.id, holiday_date, reason || null]); res.status(201).json(result.rows[0]); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+
   const { from, to } = req.query;
   try {
     const result = await client.query(
