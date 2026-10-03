@@ -1390,8 +1390,9 @@ app.post('/admin/reset-services', async (req, res) => {
 app.get('/cities', async (req, res) => {
   try {
     const result = await client.query(`
-      SELECT DISTINCT country, city AS name
-      FROM services
+      SELECT country, name FROM cities
+      UNION
+      SELECT DISTINCT country, city AS name FROM services
       WHERE country IS NOT NULL AND city IS NOT NULL
       ORDER BY country, name
     `);
