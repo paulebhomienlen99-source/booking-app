@@ -124,6 +124,24 @@
       </div>
     </div>
 
+    <div id="providerSection" class="card" style="margin-bottom: 20px;">
+      <h2 style="color: #667eea;">Publish your service or rental</h2>
+      <p style="margin: 8px 0 15px; color: #666;">Listings require provider verification and admin approval before customers can book them.</p>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <input id="listingName" placeholder="Service or rental name">
+        <select id="listingType"><option value="service">Service</option><option value="rental">Rental</option></select>
+        <input id="listingCategory" placeholder="Category, e.g. tour, cleaning, bike">
+        <input id="listingPrice" type="number" min="0" step="0.01" placeholder="Price">
+        <input id="listingCountry" placeholder="Country">
+        <input id="listingCity" placeholder="City">
+        <input id="listingUnit" placeholder="Rental unit, e.g. hour or day" value="hour">
+        <input id="listingDuration" type="number" min="1" value="60" placeholder="Duration minutes">
+      </div>
+      <textarea id="listingDescription" placeholder="Describe what customers receive" style="width: 100%; min-height: 90px; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px;"></textarea>
+      <button onclick="publishListing()">Submit listing for approval</button>
+      <div id="providerListings" style="margin-top: 15px;"></div>
+    </div>
+
     <div id="dashboardSection" class="hidden">
       <h2 style="color: white; margin-bottom: 25px;">ðŸ“Š Your Dashboard</h2>
       
@@ -345,7 +363,24 @@
       loadEarnings();
       loadPaymentHistory();
       loadBookings();
+      loadProviderListings();
       setInterval(loadBookings, 5000);
+    }
+
+    async function publishListing() {
+      const body = { name: document.getElementById('listingName').value, description: document.getElementById('listingDescription').value, category: document.getElementById('listingCategory').value, price: Number(document.getElementById('listingPrice').value), country: document.getElementById('listingCountry').value, city: document.getElementById('listingCity').value, listing_type: document.getElementById('listingType').value, rental_unit: document.getElementById('listingUnit').value, duration_minutes: Number(document.getElementById('listingDuration').value) };
+      const res = await fetch(`${API}/provider/services`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || 'Could not publish listing');
+      alert('Listing submitted for verification and approval');
+      loadProviderListings();
+    }
+
+    async function loadProviderListings() {
+      const container = document.getElementById('providerListings');
+      if (!container || !token) return;
+      const res = await fetch(`${API}/provider/services`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const listings = await res.json(); container.innerHTML = listings.map(x => `<div><strong>${x.name}</strong> · ${x.listing_type} · ${x.approval_status}</div>`).join('') || '<p>No listings yet.</p>'; }
     }
 
     async function login() {
