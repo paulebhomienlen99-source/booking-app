@@ -195,38 +195,7 @@ app.post('/provider/register', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/provider/documents', verifyToken, async (req, res) => {
-  const { document_type, document_url, document_name } = req.body;
-  if (!document_type || !document_url) return res.status(400).json({ error: 'document_type and document_url are required' });
-  try {
-    const result = await client.query(`INSERT INTO provider_documents (id, provider_id, document_type, document_url, document_name) VALUES ($1,$2,$3,$4,$5) RETURNING id, document_type, document_name, status, created_at`, [uuidv4(), req.userId, document_type, document_url, document_name || null]);
-    await client.query(`UPDATE users SET is_provider=true, verification_status='pending' WHERE id=$1`, [req.userId]);
-    res.status(201).json(result.rows[0]);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/provider/documents', verifyToken, async (req, res) => {
-  try { res.json((await client.query('SELECT id, document_type, document_name, status, review_notes, reviewed_at, created_at FROM provider_documents WHERE provider_id=$1 ORDER BY created_at DESC', [req.userId])).rows); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/admin/provider-documents', verifyAdmin, async (req, res) => {
-  try { res.json((await client.query(`SELECT d.id, d.provider_id, d.document_type, d.document_name, d.document_url, d.status, d.review_notes, d.reviewed_at, u.name AS provider_name, u.email FROM provider_documents d JOIN users u ON u.id=d.provider_id ORDER BY d.created_at DESC`)).rows); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.patch('/admin/provider-documents/:id/review', verifyAdmin, async (req, res) => {
-  const { status, notes } = req.body;
-  if (!['approved', 'rejected', 'pending'].includes(status)) return res.status(400).json({ error: 'Invalid document status' });
-  try {
-    const result = await client.query(`UPDATE provider_documents SET status=$1, review_notes=$2, reviewed_at=CURRENT_TIMESTAMP WHERE id=$3 RETURNING *`, [status, notes || null, req.params.id]);
-    if (!result.rows.length) return res.status(404).json({ error: 'Document not found' });
-    if (status === 'rejected') await client.query(`UPDATE users SET verification_status='rejected', verification_notes=$1 WHERE id=$2`, [notes || 'Document rejected', result.rows[0].provider_id]);
-    res.json({ id: result.rows[0].id, status: result.rows[0].status, review_notes: result.rows[0].review_notes });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-
+app.get('/provider/verification-status', verifyToken, async (req, res) => {
   try {
     const result = await client.query('SELECT is_provider, verification_status, verified_at, verification_notes FROM users WHERE id = $1', [req.userId]);
     res.json(result.rows[0] || { is_provider: false, verification_status: 'unverified' });
@@ -487,8 +456,8 @@ async function initDB() {
     await client.query(`CREATE INDEX IF NOT EXISTS availability_slots_lookup ON availability_slots(service_id, slot_date, start_time)`);
     console.log('? Provider availability table created');
     
+    await client.query(`CREATE TABLE IF NOT EXISTS booking_confirmations (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, email_sent BOOLEAN DEFAULT false, sent_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`CREATE TABLE IF NOT EXISTS provider_documents (id UUID PRIMARY KEY, provider_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, document_type VARCHAR(50) NOT NULL, document_url TEXT NOT NULL, document_name VARCHAR(255), status VARCHAR(20) DEFAULT 'pending', review_notes TEXT, reviewed_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS provider_documents_provider_idx ON provider_documents(provider_id, status)`);
     await client.query(`CREATE TABLE IF NOT EXISTS booking_reminders (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, reminder_type VARCHAR(30) NOT NULL, scheduled_for TIMESTAMP NOT NULL, sent_at TIMESTAMP, UNIQUE(booking_id, reminder_type))`);
     await client.query(`CREATE INDEX IF NOT EXISTS booking_reminders_due ON booking_reminders(scheduled_for, sent_at)`);
     console.log('? Booking confirmations table created');
@@ -1410,7 +1379,7 @@ app.post('/admin/reset-services', async (req, res) => {
       ('550e8400-e29b-41d4-a716-446655440600', 'Flamenco Lesson', 'Traditional flamenco dance class', 'entertainment', 90, 50.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440601', 'Paella Cooking Class', 'Learn authentic Spanish paella', 'food', 120, 60.00, 'Spain', 'Valencia'),
       ('550e8400-e29b-41d4-a716-446655440602', 'Sagrada Familia Tour', 'Guided Barcelona cathedral tour', 'tour', 120, 80.00, 'Spain', 'Barcelona'),
-      ('550e8400-e29b-41d4-a716-446655440603', 'Park Güell Tour', 'Guided Gaudí park experience', 'tour', 180, 95.00, 'Spain', 'Barcelona'),
+      ('550e8400-e29b-41d4-a716-446655440603', 'Park G?ell Tour', 'Guided Gaud? park experience', 'tour', 180, 95.00, 'Spain', 'Barcelona'),
       ('550e8400-e29b-41d4-a716-446655440604', 'Spanish Guitar Lesson', 'Professional guitar instruction', 'freelance', 60, 55.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440605', 'Prado Museum Tour', 'Private art museum tour', 'tour', 180, 100.00, 'Spain', 'Madrid'),
       ('550e8400-e29b-41d4-a716-446655440606', 'Tapas Food Tour', 'Spanish tapas tasting tour', 'food', 180, 70.00, 'Spain', 'Barcelona'),
