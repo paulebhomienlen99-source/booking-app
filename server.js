@@ -1540,12 +1540,16 @@ app.get('/services-by-location', async (req, res) => {
     const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
     const result = await client.query(`
-      SELECT id, name, description, price, country, city, availability_status
-      FROM services
+      SELECT s.id, s.name, s.description, s.price, s.country, s.city, s.availability_status,
+             s.listing_type, s.rental_unit, s.approval_status,
+             COALESCE(u.verification_status, 'unverified') AS provider_verification_status,
+             u.id AS provider_id, u.name AS provider_name,
+             COALESCE(s.available_count, 0) AS available_count,
+             COALESCE((SELECT COUNT(*) FROM availability_slots a WHERE a.service_id=s.id AND a.active=true AND a.slot_date >= CURRENT_DATE), 0) AS live_slot_count
+      FROM services s LEFT JOIN users u ON u.id=s.provider_id
       ${where}
-      ORDER BY name
+      ORDER BY s.name
     `, params);
-
     res.json(result.rows);
   } catch (err) {
     console.error('Location services error:', err);
