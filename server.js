@@ -146,6 +146,20 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
+app.get('/marketplace', async (req, res) => {
+  const { country, city, category, type, q } = req.query;
+  try {
+    const params = []; const filters = ["s.approval_status = 'approved'", "u.verification_status = 'verified'"];
+    if (country) { params.push(country); filters.push(`s.country = $${params.length}`); }
+    if (city) { params.push(city); filters.push(`s.city = $${params.length}`); }
+    if (category) { params.push(category); filters.push(`s.category = $${params.length}`); }
+    if (type) { params.push(type); filters.push(`s.listing_type = $${params.length}`); }
+    if (q) { params.push(`%${q}%`); filters.push(`(s.name ILIKE $${params.length} OR s.description ILIKE $${params.length})`); }
+    const result = await client.query(`SELECT s.id, s.name, s.description, s.category, s.price, s.country, s.city, s.listing_type, s.rental_unit, s.availability_status, u.id AS provider_id, u.name AS provider_name, u.rating, u.total_reviews FROM services s JOIN users u ON u.id=s.provider_id WHERE ${filters.join(' AND ')} ORDER BY s.country, s.city, s.name`, params);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/provider/services', verifyToken, async (req, res) => {
   const { name, description, category, duration_minutes = 60, price, country, city, listing_type = 'service', rental_unit = 'hour' } = req.body;
   if (!name || !description || !category || !price || !country || !city) return res.status(400).json({ error: 'Required listing fields are missing' });
