@@ -457,6 +457,8 @@ async function initDB() {
     console.log('✓ Provider availability table created');
     
     await client.query(`CREATE TABLE IF NOT EXISTS booking_confirmations (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, email_sent BOOLEAN DEFAULT false, sent_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    await client.query(`CREATE TABLE IF NOT EXISTS booking_reminders (id UUID PRIMARY KEY, booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE, reminder_type VARCHAR(30) NOT NULL, scheduled_for TIMESTAMP NOT NULL, sent_at TIMESTAMP, UNIQUE(booking_id, reminder_type))`);
+    await client.query(`CREATE INDEX IF NOT EXISTS booking_reminders_due ON booking_reminders(scheduled_for, sent_at)`);
     console.log('✓ Booking confirmations table created');
     
         await client.query(`CREATE TABLE IF NOT EXISTS reviews (id UUID PRIMARY KEY, service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE, booking_id UUID REFERENCES bookings(id) ON DELETE SET NULL, user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE, rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5), review_text TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
@@ -666,7 +668,12 @@ app.post('/bookings', verifyToken, async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Service is currently unavailable' });
     }
-    const conflict = await client.query(
+    const slot = await client.query(`SELECT s.id, s.capacity FROM availability_slots s WHERE s.service_id=$1 AND s.slot_date=$2 AND s.start_time <= $3::time AND s.end_time > $3::time AND s.active=true FOR UPDATE`, [service_id, booking_date, booking_time]);
+    if (slot.rows.length) {
+      const used = await client.query(`SELECT COUNT(*)::int AS count FROM bookings WHERE service_id=$1 AND booking_date=$2 AND booking_time >= $3 AND status IN ('pending','confirmed')`, [service_id, booking_date, booking_time]);
+      if (used.rows[0].count >= slot.rows[0].capacity) { await client.query('ROLLBACK'); return res.status(409).json({ error: 'Selected slot is full' }); }
+    }
+    const conflict = await client.query(
       `SELECT b.id FROM bookings b JOIN services s ON s.id = b.service_id
        WHERE b.service_id = $1 AND b.booking_date = $2 AND b.status IN ('pending','confirmed')
        AND b.booking_time < ($4::time + (s.duration_minutes + s.buffer_minutes) * interval '1 minute')
@@ -690,6 +697,8 @@ app.post('/bookings', verifyToken, async (req, res) => {
       `INSERT INTO booking_confirmations (id, booking_id, user_id, email_sent, sent_at) VALUES ($1, $2, $3, false, NULL)`,
       [uuidv4(), bookingId, req.userId]
     );
+    await client.query(`INSERT INTO booking_reminders (id, booking_id, reminder_type, scheduled_for) VALUES ($1,$2,'24h', NOW() + interval '24 hours') ON CONFLICT DO NOTHING`, [uuidv4(), bookingId]);
+    await client.query(`INSERT INTO booking_reminders (id, booking_id, reminder_type, scheduled_for) VALUES ($1,$2,'1h', NOW() + interval '1 hour') ON CONFLICT DO NOTHING`, [uuidv4(), bookingId]);
     await client.query('COMMIT');
     const servicePrice = Number(service.price);
     res.status(201).json({ id: bookingId, service_name: service.name, service_price: servicePrice, commission: Number((servicePrice * 0.20).toFixed(2)), total: Number((servicePrice * 1.20).toFixed(2)), status: 'pending', confirmation: `/bookings/${bookingId}/confirmation` });
