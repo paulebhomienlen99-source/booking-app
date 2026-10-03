@@ -417,6 +417,8 @@ async function initDB() {
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS availability_status VARCHAR(50) DEFAULT 'available'`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS available_count INT DEFAULT 999`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS verification_required BOOLEAN DEFAULT true`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS provider_id UUID`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS verification_required BOOLEAN DEFAULT true`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS listing_type VARCHAR(20) DEFAULT 'service'`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending'`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS rental_unit VARCHAR(50) DEFAULT 'hour'`);
