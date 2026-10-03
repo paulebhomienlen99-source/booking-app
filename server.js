@@ -146,6 +146,28 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
+app.post('/provider/services', verifyToken, async (req, res) => {
+  const { name, description, category, duration_minutes = 60, price, country, city, listing_type = 'service', rental_unit = 'hour' } = req.body;
+  if (!name || !description || !category || !price || !country || !city) return res.status(400).json({ error: 'Required listing fields are missing' });
+  if (!['service', 'rental'].includes(listing_type)) return res.status(400).json({ error: 'listing_type must be service or rental' });
+  try {
+    await client.query('UPDATE users SET is_provider = true, verification_status = COALESCE(verification_status, $1) WHERE id = $2', ['pending', req.userId]);
+    const result = await client.query(`INSERT INTO services (id, provider_id, name, description, category, duration_minutes, price, country, city, listing_type, rental_unit, approval_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending') RETURNING *`, [uuidv4(), req.userId, name, description, category, duration_minutes, price, country, city, listing_type, rental_unit]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/provider/services', verifyToken, async (req, res) => {
+  try { res.json((await client.query('SELECT * FROM services WHERE provider_id=$1 ORDER BY created_at DESC', [req.userId])).rows); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/admin/provider-listings/:id/approval', verifyAdmin, async (req, res) => {
+  const { status } = req.body;
+  if (!['approved', 'rejected', 'pending'].includes(status)) return res.status(400).json({ error: 'Invalid approval status' });
+  try { res.json((await client.query('UPDATE services SET approval_status=$1 WHERE id=$2 AND provider_id IS NOT NULL RETURNING id,name,approval_status', [status, req.params.id])).rows[0] || { error: 'Listing not found' }); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
 app.post('/provider/register', verifyToken, async (req, res) => {
   try {
     const { bio, phone } = req.body;
@@ -373,11 +395,17 @@ async function initDB() {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unverified'`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_notes TEXT`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(20) DEFAULT 'unverified'`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_notes TEXT`);
     
     await client.query(`CREATE TABLE IF NOT EXISTS services (id UUID PRIMARY KEY, provider_id UUID REFERENCES users(id), name VARCHAR(255) NOT NULL, description TEXT, category VARCHAR(50) NOT NULL, duration_minutes INT NOT NULL, price DECIMAL(10, 2) NOT NULL, country VARCHAR(100), city VARCHAR(100), availability_status VARCHAR(50) DEFAULT 'available', available_count INT DEFAULT 999, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS availability_status VARCHAR(50) DEFAULT 'available'`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS available_count INT DEFAULT 999`);
     await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS verification_required BOOLEAN DEFAULT true`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS listing_type VARCHAR(20) DEFAULT 'service'`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending'`);
+    await client.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS rental_unit VARCHAR(50) DEFAULT 'hour'`);
     console.log('âœ“ Services table created with provider_id');
     
     await client.query(`CREATE TABLE IF NOT EXISTS notifications (id UUID PRIMARY KEY, user_id UUID NOT NULL REFERENCES users(id), type VARCHAR(50), title VARCHAR(255), message TEXT, read BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
