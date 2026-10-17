@@ -21,6 +21,10 @@ app.use('/api/slots', slotRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/customers', customerRoutes);
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api/payments/status', (req, res) => {
+  const live = process.env.NODE_ENV === 'production' && Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
+  res.json({ livePaymentsConfigured: live, environment: process.env.NODE_ENV || 'development' });
+});
 app.get('/', (req, res) => res.json({ status: 'ok', service: 'BookHub API' }));
 
 const PORT = process.env.APP_PORT || 5000;
