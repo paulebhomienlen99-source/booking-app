@@ -176,6 +176,13 @@ app.get('/provider/services', verifyToken, async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/admin/provider-listings', verifyAdmin, async (req, res) => {
+  try {
+    const result = await client.query(`SELECT s.id, s.name, s.description, s.category, s.price, s.country, s.city, s.listing_type, s.rental_unit, s.approval_status, u.id AS provider_id, u.name AS provider_name, u.email AS provider_email, u.verification_status FROM services s LEFT JOIN users u ON u.id=s.provider_id WHERE s.provider_id IS NOT NULL ORDER BY s.created_at DESC`);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.patch('/admin/provider-listings/:id/approval', verifyAdmin, async (req, res) => {
   const { status } = req.body;
   if (!['approved', 'rejected', 'pending'].includes(status)) return res.status(400).json({ error: 'Invalid approval status' });
