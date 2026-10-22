@@ -1,0 +1,372 @@
+import express from "express";
+import { pool } from "../config/db.js";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import verifyAdminToken from "../middleware/verifyAdminToken.js";
+import { JWT_SECRET } from "../config/env.js";
+
+const router = express.Router();
+
+/*
+=================================================
+PUBLIC TEST ROUTE
+=================================================
+*/
+
+router.get("/test", (req, res) => {
+  res.json({
+    success: true,
+    message: "Admin router works",
+  });
+});
+
+/*
+=================================================
+ADMIN LOGIN
+=================================================
+*/
+
+router.post("/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        email,
+        password_hash
+      FROM admin_users
+      WHERE email = $1
+      `,
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: "Email not found",
+      });
+    }
+
+    const admin = result.rows[0];
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      admin.password_hash
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        success: false,
+        error: "Wrong password",
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        adminId: admin.id,
+        email: admin.email,
+        isAdmin: true,
+      },
+      JWT_SECRET,
+      {
+        expiresIn: "8h",
+      }
+    );
+
+    res.json({
+      success: true,
+      token,
+      admin: {
+        id: admin.id,
+        email: admin.email,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+router.use(verifyAdminToken);
+
+/*
+=================================================
+DASHBOARD
+=================================================
+*/
+
+router.get("/dashboard", (req, res) => {
+  res.json({
+    success: true,
+    admin: req.admin,
+  });
+});
+
+/*
+=================================================
+PROFILE
+=================================================
+*/
+
+router.get("/profile", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+      SELECT id, email
+      FROM admin_users
+      WHERE id = $1
+      `,
+      [req.admin.adminId]
+    );
+
+    res.json({
+      success: true,
+      admin: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+/*
+=================================================
+PENDING PROVIDERS
+=================================================
+*/
+
+router.get("/providers/pending", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT *
+      FROM providers
+      WHERE approved = false
+      ORDER BY id ASC
+    `);
+
+    res.json({
+      success: true,
+      providers: result.rows,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+/*
+=================================================
+APPROVE PROVIDER
+=================================================
+*/
+
+router.put("/providers/:id/approve", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      UPDATE providers
+      SET approved = true
+      WHERE id = $1
+      RETURNING *
+      `,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      provider: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+/*
+=================================================
+REJECT PROVIDER
+=================================================
+*/
+
+router.put("/providers/:id/reject", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await pool.query(
+      `
+      DELETE FROM providers
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    res.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+/*
+=================================================
+PENDING SERVICES
+=================================================
+*/
+
+router.get("/services/pending", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT *
+      FROM services
+      WHERE approved = false
+      ORDER BY id ASC
+    `);
+
+    res.json({
+      success: true,
+      services: result.rows,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+/*
+=================================================
+APPROVE SERVICE
+=================================================
+*/
+
+router.put("/services/:id/approve", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      UPDATE services
+      SET approved = true
+      WHERE id = $1
+      RETURNING *
+      `,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      service: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+/*
+=================================================
+REJECT SERVICE
+=================================================
+*/
+
+router.put("/services/:id/reject", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await pool.query(
+      `
+      DELETE FROM services
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    res.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+/*
+=================================================
+ADMIN STATS
+=================================================
+*/
+
+router.get("/stats", async (req, res) => {
+  try {
+    const users = await pool.query(
+      `SELECT COUNT(*) FROM users`
+    );
+
+    const providers = await pool.query(
+      `SELECT COUNT(*) FROM providers`
+    );
+
+    const services = await pool.query(
+      `SELECT COUNT(*) FROM services`
+    );
+
+    res.json({
+      success: true,
+      stats: {
+        users: Number(users.rows[0].count),
+        providers: Number(
+          providers.rows[0].count
+        ),
+        services: Number(
+          services.rows[0].count
+        ),
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+export default router;

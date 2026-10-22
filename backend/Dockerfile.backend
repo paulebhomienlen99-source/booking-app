@@ -1,0 +1,27 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm ci --only=production
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY --from=builder /app/node_modules ./node_modules
+
+# QUI: copia db.js
+COPY db.js .
+
+# Copia il resto del backend
+COPY server.js .
+COPY provider-adapter.js .
+COPY routes ./routes
+COPY middleware ./middleware
+
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
+
+EXPOSE 3001
+CMD ["node", "server.js"]
+
