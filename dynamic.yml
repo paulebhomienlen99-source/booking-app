@@ -1,0 +1,22 @@
+http:
+  routers:
+    pgadmin:
+      rule: "Host(`pgadmin.localhost`)"
+      entryPoints:
+        - web
+      service: pgadmin
+
+  services:
+    pgadmin:
+      loadBalancer:
+        servers:
+          - url: "http://booking_pgadmin:80"
+
+
+
+
+
+
+
+
+

@@ -1,239 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BookHub - Service Booking Marketplace</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://www.paypal.com/sdk/js?client-id=BAAT3YO1zj4kvBUPesoaJxQpXNvLAYSypzV4fJFjeOX3yZ7NHJZcnlskmX4XRJccyHnvm-mK30s7VW6Mck&currency=USD"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-    .hidden { display: none !important; }
-    .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 20px; }
-    input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em; }
-    button { background: #667eea; color: white; border: none; cursor: pointer; font-weight: bold; }
-    button:hover { background: #764ba2; }
-    #authSection { max-width: 400px; margin: 50px auto; }
-    #appSection { max-width: 1200px; margin: 0 auto; }
-    header { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin-bottom: 30px; color: white; display: flex; justify-content: space-between; align-items: center; }
-    header h1 { font-size: 2em; }
-    .user-info { display: flex; align-items: center; gap: 15px; }
-    .user-info button { width: auto; padding: 8px 15px; margin: 0; }
-    #map { height: 300px; border-radius: 10px; margin-bottom: 15px; }
-    .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
-    .success { color: #155724; background: #d4edda; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
-  </style>
-</head>
-<body>
-  <div id="authSection">
-    <div class="card">
-      <h2>📅 BookHub</h2>
-      <div id="authError" class="error hidden"></div>
-      <div id="authSuccess" class="success hidden"></div>
-      
-      <div id="loginForm">
-        <h3>Login</h3>
-        <input type="email" id="loginEmail" placeholder="Email" required>
-        <input type="password" id="loginPassword" placeholder="Password" required>
-        <button onclick="login()">Login</button>
-        <p style="text-align: center; margin-top: 10px;">Don't have an account? <a href="#" onclick="switchTab('signup'); return false;" class="link" style="color: #667eea;">Sign Up</a></p>
-      </div>
 
-      <div id="signupForm" class="hidden">
-        <h3>Sign Up</h3>
-        <input type="text" id="signupName" placeholder="Full Name" required>
-        <input type="email" id="signupEmail" placeholder="Email" required>
-        <input type="password" id="signupPassword" placeholder="Password" required>
-        <button onclick="signup()">Sign Up</button>
-        <p style="text-align: center; margin-top: 10px;">Already have an account? <a href="#" onclick="switchTab('login'); return false;" class="link" style="color: #667eea;">Login</a></p>
-      </div>
-
-      <div id="browseForm" class="hidden" style="max-height: 600px; overflow-y: auto;">
-        <h3>👀 Browse All Services</h3>
-        <div id="browseServices" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="appSection" class="hidden">
-    <header>
-      <h1>📅 BookHub</h1>
-      <div class="user-info">
-        <p>Welcome, <strong id="userName">User</strong>!</p>
-        <button onclick="switchPage('bookings')">📋 My Bookings</button>
-        <button id="dashboardBtn" onclick="switchPage('dashboard')" style="background: #28a745; display: none;">📊 Dashboard</button>
-        <button onclick="logout()" style="background: #dc3545;">Logout</button>
-      </div>
-    </header>
-
-    <div id="bookingSection">
-      <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px;">
-        <h2 style="color: white; margin-bottom: 25px; font-size: 28px; text-align: center;">✨ Create Your Booking</h2>
-        
-        <button onclick="getLocation()" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; margin-bottom: 20px;">📍 Enable GPS Location</button>
-        
-        <div id="locationInfo" style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; border-left: 4px solid #4ade80;">📍 Your Location: <span id="locationCoords" style="font-weight: bold;">Not set</span></div>
-        
-        <div id="map"></div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
-            <label style="color: white; font-weight: bold; margin-bottom: 8px; display: block;">🌍 Country</label>
-            <select id="country" required onchange="loadCitiesByCountry()" style="color: #333;"><option value="">Select country</option></select>
-          </div>
-          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
-            <label style="color: white; font-weight: bold; margin-bottom: 8px; display: block;">🏙️ City</label>
-            <select id="city" required onchange="loadServicesByLocation(document.getElementById('country').value, this.value)" style="color: #333;"><option>Select city</option></select>
-          </div>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-          <label style="color: white; font-weight: bold; margin-bottom: 8px; display: block;">📦 Select Service</label>
-          <select id="service" required style="color: #333;"><option>Select a service</option></select>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
-            <label style="color: white; font-weight: bold; margin-bottom: 8px; display: block;">📅 Date</label>
-            <input type="date" id="date" required style="color: #333;">
-          </div>
-          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
-            <label style="color: white; font-weight: bold; margin-bottom: 8px; display: block;">🕐 Time</label>
-            <input type="time" id="time" required style="color: #333;">
-          </div>
-        </div>
-
-        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-          <label style="color: white; font-weight: bold; margin-bottom: 8px; display: block;">📍 Address</label>
-          <input type="text" id="address" placeholder="Enter your address" required style="color: #333;">
-        </div>
-
-        <div id="distanceInfo" style="background: rgba(74, 222, 128, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; border-left: 4px solid #4ade80; font-weight: bold; color: #4ade80;">📏 Distance to city: <span id="distance">--</span> km</div>
-        
-        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-          <button onclick="createBooking()" style="flex: 1; padding: 14px; background: white; color: #667eea; font-weight: bold; font-size: 1.1em; border-radius: 5px; border: none; cursor: pointer;">🎉 Book Now</button>
-          <button onclick="viewServiceDetails()" style="flex: 1; padding: 14px; background: rgba(255,255,255,0.2); color: white; font-weight: bold; font-size: 1.1em; border-radius: 5px; border: 2px solid white; cursor: pointer;">⭐ Details</button>
-        </div>
-        
-        <div id="paymentMethodContainer" style="margin-top: 20px; display: none;">
-          <h3 style="color: white; margin-bottom: 15px; text-align: center;">💳 Pay with PayPal</h3>
-          <div id="paypal-button-container"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="providerSection" class="card" style="margin-bottom: 20px;">
-      <h2 style="color: #667eea;">Publish your service or rental</h2>
-      <p style="margin: 8px 0 15px; color: #666;">Listings require provider verification and admin approval before customers can book them.</p>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <input id="listingName" placeholder="Service or rental name">
-        <select id="listingType"><option value="service">Service</option><option value="rental">Rental</option></select>
-        <input id="listingCategory" placeholder="Category, e.g. tour, cleaning, bike">
-        <input id="listingPrice" type="number" min="0" step="0.01" placeholder="Price">
-        <input id="listingCountry" placeholder="Country">
-        <input id="listingCity" placeholder="City">
-        <input id="listingUnit" placeholder="Rental unit, e.g. hour or day" value="hour">
-        <input id="listingDuration" type="number" min="1" value="60" placeholder="Duration minutes">
-      </div>
-      <textarea id="listingDescription" placeholder="Describe what customers receive" style="width: 100%; min-height: 90px; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px;"></textarea>
-      <button onclick="publishListing()">Submit listing for approval</button>
-      <div id="providerListings" style="margin-top: 15px;"></div>
-    </div>
-
-    <div id="dashboardSection" class="hidden">
-      <h2 style="color: white; margin-bottom: 25px;">📊 Your Dashboard</h2>
-      
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 25px;">
-        <div id="sensitiveSection" style="display: none;">
-          <div class="card" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; text-align: center; padding: 25px;">
-            <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">💰 TOTAL EARNINGS</p>
-            <h2 id="totalEarnings" style="color: white; font-size: 2.5em; margin: 0; font-weight: bold;">$0</h2>
-            <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">Commission earned</p>
-          </div>
-          
-          <div class="card" style="background: linear-gradient(135deg, #17a2b8, #20b2aa); color: white; text-align: center; padding: 25px;">
-            <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">💵 AVG COMMISSION</p>
-            <h2 id="avgCommission" style="color: white; font-size: 2em; margin: 0; font-weight: bold;">20%</h2>
-            <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">Per booking</p>
-          </div>
-        </div>
-
-        <div class="card" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; text-align: center; padding: 25px;">
-          <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">📈 TOTAL BOOKINGS</p>
-          <h2 id="totalBookings" style="color: white; font-size: 2.5em; margin: 0; font-weight: bold;">0</h2>
-          <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">All-time bookings</p>
-        </div>
-        
-        <div class="card" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; text-align: center; padding: 25px;">
-          <p style="font-size: 0.9em; opacity: 0.9; margin-bottom: 10px;">🌟 MEMBER SINCE</p>
-          <h2 style="color: white; font-size: 1.8em; margin: 0; font-weight: bold;" id="memberSince">Today</h2>
-          <p style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">Unlimited Bookings</p>
-        </div>
-      </div>
-
-      <div id="revenueSection" style="display: none;">
-        <div class="card">
-          <h3 style="color: #667eea; margin-bottom: 15px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">💹 Revenue Breakdown</h3>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span>Base Revenue:</span><span style="font-weight: bold;" id="baseRevenue">$0</span></div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 12px;"><span>Your Commission (20%):</span><span style="font-weight: bold; color: #28a745;" id="commissionRevenue">$0</span></div>
-          <div style="display: flex; justify-content: space-between; border-top: 2px solid #ddd; padding-top: 10px;"><span style="font-weight: bold;">Total Revenue:</span><span style="font-weight: bold; color: #667eea; font-size: 1.2em;" id="totalRevenue">$0</span></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="color: #667eea; margin-bottom: 15px;">📊 Booking Status</h3>
-        <div style="display: flex; align-items: center; margin-bottom: 15px;">
-          <div style="width: 40px; height: 40px; background: #ffc107; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 10px;" id="pendingBookings">0</div>
-          <div><p style="margin: 0; color: #ffc107; font-weight: bold;">Pending</p></div>
-        </div>
-        <div style="display: flex; align-items: center; margin-bottom: 15px;">
-          <div style="width: 40px; height: 40px; background: #28a745; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 10px;" id="confirmedBookings">0</div>
-          <div><p style="margin: 0; color: #28a745; font-weight: bold;">Confirmed</p></div>
-        </div>
-        <div style="display: flex; align-items: center;">
-          <div style="width: 40px; height: 40px; background: #dc3545; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 10px;" id="cancelledBookings">0</div>
-          <div><p style="margin: 0; color: #dc3545; font-weight: bold;">Cancelled</p></div>
-        </div>
-      </div>
-
-      <div class="card" style="border-left: 4px solid #dc3545;">
-        <h3 style="color: #dc3545; margin-bottom: 15px;">🗑️ Cancelled Bookings</h3>
-        <div id="cancelledBookingsList" style="max-height: 400px; overflow-y: auto;"></div>
-      </div>
-
-      <div class="card">
-        <h3 style="color: #667eea; margin-bottom: 20px; font-size: 1.3em;">📦 Recent Orders</h3>
-        <div style="overflow-x: auto;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 0.95em;">
-            <thead>
-              <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
-                <th style="padding: 12px; text-align: left; font-weight: bold;">Service</th>
-                <th style="padding: 12px; text-align: center; font-weight: bold;">City</th>
-                <th style="padding: 12px; text-align: center; font-weight: bold;">Date</th>
-                <th style="padding: 12px; text-align: center; font-weight: bold;">Amount</th>
-                <th style="padding: 12px; text-align: center; font-weight: bold;">Commission (20%)</th>
-                <th style="padding: 12px; text-align: center; font-weight: bold;">Status</th>
-              </tr>
-            </thead>
-            <tbody id="ordersTableBody">
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const API = window.location.hostname === 'localhost' && window.location.port === '3000'
-      ? 'http://localhost:3001'
-      : (window.location.hostname === 'www.akhere.it' || window.location.hostname === 'akhere.it')
-        ? 'https://booking-app-paulebhomienlen-646825d168bf.herokuapp.com'
-        : window.location.origin;
+    const API = 'http://localhost:3001';
     let token = localStorage.getItem('token');
     let userName = localStorage.getItem('userName');
     let userEmail = localStorage.getItem('userEmail');
@@ -357,30 +123,12 @@
       document.getElementById('userName').textContent = userName || 'User';
       const isOwner = userEmail === 'owner.paul@bookhub.app';
       document.getElementById('sensitiveSection').style.display = isOwner ? 'block' : 'none';
-      document.getElementById('revenueSection').style.display = isOwner ? 'block' : 'none';
       loadCities();
       loadServices();
       loadEarnings();
       loadPaymentHistory();
       loadBookings();
-      loadProviderListings();
       setInterval(loadBookings, 5000);
-    }
-
-    async function publishListing() {
-      const body = { name: document.getElementById('listingName').value, description: document.getElementById('listingDescription').value, category: document.getElementById('listingCategory').value, price: Number(document.getElementById('listingPrice').value), country: document.getElementById('listingCountry').value, city: document.getElementById('listingCity').value, listing_type: document.getElementById('listingType').value, rental_unit: document.getElementById('listingUnit').value, duration_minutes: Number(document.getElementById('listingDuration').value) };
-      const res = await fetch(`${API}/provider/services`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await res.json();
-      if (!res.ok) return alert(data.error || 'Could not publish listing');
-      alert('Listing submitted for verification and approval');
-      loadProviderListings();
-    }
-
-    async function loadProviderListings() {
-      const container = document.getElementById('providerListings');
-      if (!container || !token) return;
-      const res = await fetch(`${API}/provider/services`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) { const listings = await res.json(); container.innerHTML = listings.map(x => `<div><strong>${x.name}</strong> � ${x.listing_type} � ${x.approval_status}</div>`).join('') || '<p>No listings yet.</p>'; }
     }
 
     async function login() {
@@ -394,15 +142,14 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
-                const contentType = res.headers.get('content-type') || '';
-        const raw = await res.text();
-        let data;
-        try {
-          data = contentType.includes('application/json') ? JSON.parse(raw) : { error: `Server returned ${res.status} ${res.statusText}` };
-        } catch {
-          data = { error: `Server returned an invalid response (${res.status})` };
+        const data = await res.json();
+        
+        if (!res.ok) {
+          errorDiv.textContent = data.error || 'Login failed';
+          errorDiv.classList.remove('hidden');
+          return;
         }
-        if (!res.ok) throw new Error(data.error || 'Login failed');
+
         token = data.token;
         userName = data.name;
         userEmail = email;
@@ -428,15 +175,14 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password })
         });
-                const contentType = res.headers.get('content-type') || '';
-        const raw = await res.text();
-        let data;
-        try {
-          data = contentType.includes('application/json') ? JSON.parse(raw) : { error: `Server returned ${res.status} ${res.statusText}` };
-        } catch {
-          data = { error: `Server returned an invalid response (${res.status})` };
+        const data = await res.json();
+        
+        if (!res.ok) {
+          errorDiv.textContent = data.error || 'Signup failed';
+          errorDiv.classList.remove('hidden');
+          return;
         }
-        if (!res.ok) throw new Error(data.error || 'Signup failed');
+
         token = data.token;
         userName = name;
         userEmail = email;
@@ -600,8 +346,8 @@
           const data = await res.json();
           lastBookingData = data;
           document.getElementById('paymentMethodContainer').style.display = 'block';
-          renderPayPalButton(data.id, data.total);
-          alert('Reservation created: ' + data.service_name + ' - Total ' + Number(data.total).toFixed(2));
+          renderPayPalButton(data.id, data.totalPaid || data.price);
+          alert('Booking created! Now pay with PayPal');
         } else {
           const data = await res.json();
           alert('Error: ' + (data.error || 'Booking failed'));
@@ -801,6 +547,10 @@
       }
     }
 
+    async function loadSubscriptionPlans() {}
+    async function loadCurrentSubscription() {}
+    async function upgradePlan(planId) {}
+
     function switchPage(page) {
       document.getElementById('bookingSection').classList.toggle('hidden', page !== 'bookings');
       document.getElementById('dashboardSection').classList.toggle('hidden', page !== 'dashboard');
@@ -861,6 +611,4 @@
         }
       });
     }
-  </script>
-</body>
-</html>
+  

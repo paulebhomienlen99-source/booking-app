@@ -1,50 +1,83 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: booking-db
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: always
+    command:
+      - "--api.insecure=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.traefik.address=:8081"
+      - "--providers.file.filename=/dynamic.yml"
+    ports:
+      - "80:80"
+      - "8081:8081"
+    volumes:
+      - ./traefik.yml:/traefik.yml
+      - ./dynamic.yml:/dynamic.yml
+    networks:
+      - traefik-net
+
+  booking_postgres:
+    image: postgres:15
+    container_name: booking_postgres
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: booking
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - traefik-net
 
-  backend:
+  booking_backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: booking-backend
-    ports:
-      - "3001:3001"
-    env_file:
-      - .env
+      context: ./backend
+    container_name: booking_backend
+    restart: always
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/postgres"
-      NODE_ENV: development
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: booking_postgres
+      DB_PORT: 5432
+      DB_NAME: booking
+    expose:
+      - "5000"
+    networks:
+      - traefik-net
 
-  frontend:
+  booking_frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    container_name: booking-frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    restart: unless-stopped
+      context: ./frontend
+    container_name: booking_frontend
+    restart: always
+    networks:
+      - traefik-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: booking_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    networks:
+      - traefik-net
 
 volumes:
-  postgres_data:
+  pgdata:
+
+networks:
+  traefik-net:
+    external: true
+
+
+
+
+
+
+
+
 
 
 

@@ -18,15 +18,36 @@ export const getApprovedServices = async (
 ) => {
   try {
     const result = await pool.query(`
-      SELECT
-        id,
-        title,
-        description,
-        price
-      FROM services
-      WHERE status = 'approved'
-      ORDER BY id DESC
-    `);
+  SELECT
+    s.id,
+    s.title,
+    s.description,
+    s.price,
+
+    COALESCE(
+      ROUND(AVG(r.rating)::numeric, 1),
+      0
+    ) AS average_rating,
+
+    COUNT(r.id)::integer
+      AS total_reviews
+
+  FROM services s
+
+  LEFT JOIN reviews r
+    ON r.provider_id = s.provider_id
+
+  WHERE s.status = 'approved'
+
+  GROUP BY
+    s.id,
+    s.title,
+    s.description,
+    s.price
+
+  ORDER BY s.id DESC
+`);
+
 
     res.json(result.rows);
   } catch (error) {
