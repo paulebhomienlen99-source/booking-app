@@ -36,11 +36,11 @@ export const getProviderReviewsService =
     const result = await pool.query(
       `
       SELECT
-        r.id,
-        r.rating,
-        r.comment,
-        r.created_at,
-        u.name AS customer_name
+  r.id,
+  r.rating,
+  r.comment,
+  r.created_at,
+  u.email AS customer_name
       FROM reviews r
       JOIN users u
         ON u.id = r.customer_id
@@ -70,4 +70,17 @@ export const getProviderAverageRatingService =
     );
 
     return result.rows[0];
+  };
+  export const getReviewByReservationService =
+  async (reservation_id) => {
+    const result = await pool.query(
+      `
+      SELECT *
+      FROM reviews
+      WHERE reservation_id = $1
+      `,
+      [reservation_id]
+    );
+
+    return result.rows[0] || null;
   };
