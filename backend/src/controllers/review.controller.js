@@ -2,6 +2,7 @@ import {
   createReviewService,
   getProviderReviewsService,
   getProviderAverageRatingService,
+  getReviewByReservationService,
 } from "../services/review.service.js";
 
 export const createReview = async (
@@ -62,6 +63,23 @@ export const getProviderRating =
         );
 
       res.json(rating);
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        error: "Internal server error",
+      });
+    }
+  };
+  export const getReviewByReservation =
+  async (req, res) => {
+    try {
+      const review =
+        await getReviewByReservationService(
+          req.params.reservationId
+        );
+
+      res.json(review);
     } catch (error) {
       console.error(error);
 

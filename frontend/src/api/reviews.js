@@ -44,3 +44,10 @@ export function getProviderRating(
     `/provider/${providerId}/rating`
   );
 }
+export function getReviewByReservation(
+  reservationId
+) {
+  return API.get(
+    `/reservation/${reservationId}`
+  );
+}

@@ -5,6 +5,7 @@ import {
   createReview,
   getProviderReviews,
   getProviderRating,
+  getReviewByReservation,
 } from "../controllers/review.controller.js";
 
 const router = express.Router();
@@ -23,6 +24,11 @@ router.get(
 router.get(
   "/provider/:providerId/rating",
   getProviderRating
+);
+
+router.get(
+  "/reservation/:reservationId",
+  getReviewByReservation
 );
 
 export default router;
