@@ -25,7 +25,10 @@ export default function PaymentSuccess() {
           );
           return;
         }
-
+console.log(
+  "TOKEN:",
+  localStorage.getItem("token")
+);
         const response =
           await captureOrder(orderId);
 

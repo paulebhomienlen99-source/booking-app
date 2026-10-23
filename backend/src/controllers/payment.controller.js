@@ -10,7 +10,7 @@ import {
 import {
   createReservationService,
 } from "../services/reservation.service.js";
-
+import { sendMail } from "../config/email.js";
 async function readPayPalResponse(
   response
 ) {
@@ -369,15 +369,35 @@ export async function captureOrder(
      * dopo COMPLETED.
      */
     const reservation =
-      await createReservationService({
-        customer_id: customerId,
-        listing_id:
-          payment.listing_id,
-        slot_id:
-          payment.slot_id,
-        payment_status:
-          "completed",
-      });
+  await createReservationService({
+    customer_id: customerId,
+    listing_id:
+      payment.listing_id,
+    slot_id:
+      payment.slot_id,
+    payment_status:
+      "completed",
+  });
+    try {
+  await sendMail({
+    to: "test@gmail.com",
+    subject: "Prenotazione confermata",
+    html: `
+      <h2>Prenotazione confermata ✅</h2>
+      <p>La tua prenotazione è stata registrata con successo.</p>
+      <p>ID prenotazione: ${reservation.id}</p>
+    `,
+  });
+
+  console.log(
+    "EMAIL TEST INVIATA"
+  );
+} catch (mailError) {
+  console.error(
+    "EMAIL ERROR:",
+    mailError
+  );
+}
 
     await pool.query(
       `

@@ -45,7 +45,10 @@ export const getApprovedServices = async (
     s.description,
     s.price
 
-  ORDER BY s.id DESC
+  ORDER BY
+  average_rating DESC,
+  total_reviews DESC,
+  s.id DESC
 `);
 
 
