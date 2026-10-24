@@ -380,7 +380,7 @@ export async function captureOrder(
   });
     try {
   await sendMail({
-    to: "test@gmail.com",
+  to: "bookhub.notifications@gmail.com",
     subject: "Prenotazione confermata",
     html: `
       <h2>Prenotazione confermata ✅</h2>
@@ -388,6 +388,7 @@ export async function captureOrder(
       <p>ID prenotazione: ${reservation.id}</p>
     `,
   });
+console.log("EMAIL INVIATA ✅");
 
   console.log(
     "EMAIL TEST INVIATA"
