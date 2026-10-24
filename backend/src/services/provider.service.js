@@ -200,33 +200,74 @@ export const getProviderReservationsService =
         `,
         [providerId]
       );
+const monthlyRevenue =
+  await pool.query(
+    `
+    SELECT
+      TO_CHAR(
+        r.created_at,
+        'Mon'
+      ) AS month,
+      COALESCE(
+        SUM(s.price),
+        0
+      ) AS revenue
+    FROM reservations r
+    JOIN services s
+      ON s.id = r.listing_id
+    WHERE r.provider_id = $1
+      AND r.status = 'confirmed'
+    GROUP BY
+      TO_CHAR(
+        r.created_at,
+        'Mon'
+      ),
+      DATE_TRUNC(
+        'month',
+        r.created_at
+      )
+    ORDER BY
+      DATE_TRUNC(
+        'month',
+        r.created_at
+      )
+    `,
+    [providerId]
+  );
+return {
+  totalBookings:
+    Number(
+      bookings.rows[0]
+        .total_bookings
+    ),
 
-    return {
-      totalBookings:
-        Number(
-          bookings.rows[0]
-            .total_bookings
-        ),
-      cancelledBookings:
-        Number(
-          bookings.rows[0]
-            .cancelled_bookings
-        ),
-      totalReviews:
-        Number(
-          reviews.rows[0]
-            .total_reviews
-        ),
-      averageRating:
-        Number(
-          reviews.rows[0]
-            .average_rating
-        ),
-      totalRevenue:
-        Number(
-          revenue.rows[0]
-            .total_revenue
-        ),
-    };
-  };
-  
+  cancelledBookings:
+    Number(
+      bookings.rows[0]
+        .cancelled_bookings
+    ),
+
+  totalReviews:
+    Number(
+      reviews.rows[0]
+        .total_reviews
+    ),
+
+  averageRating:
+    Number(
+      reviews.rows[0]
+        .average_rating
+    ),
+
+  totalRevenue:
+    Number(
+      revenue.rows[0]
+        .total_revenue
+    ),
+
+  monthlyRevenue:
+    monthlyRevenue.rows,
+
+};
+
+};

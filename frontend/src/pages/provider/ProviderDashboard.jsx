@@ -14,6 +14,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  LineChart,
+  Line,
 } from "recharts";
 export default function ProviderDashboard() {
   const [reviews, setReviews] = useState([]);
@@ -28,6 +30,7 @@ const [analytics, setAnalytics] =
     totalReviews: 0,
     averageRating: 0,
     totalRevenue: 0,
+    monthlyRevenue: [],
   });
   useEffect(() => {
     const providerId = 1;
@@ -148,7 +151,37 @@ const chartData = [
     </BarChart>
   </ResponsiveContainer>
 </div>
+<div className="bg-white p-6 rounded shadow mb-8">
+  <h3 className="text-xl font-bold mb-4">
+    💰 Entrate mensili
+  </h3>
 
+  <ResponsiveContainer
+    width="100%"
+    height={300}
+  >
+    <LineChart
+      data={analytics.monthlyRevenue}
+    >
+      <CartesianGrid
+        strokeDasharray="3 3"
+      />
+
+      <XAxis dataKey="month" />
+
+      <YAxis />
+
+      <Tooltip />
+
+      <Line
+        type="monotone"
+        dataKey="revenue"
+        stroke="#16a34a"
+        strokeWidth={3}
+      />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
 <div className="grid grid-cols-3 gap-6">
         <div className="p-4 bg-white shadow rounded">
           <h3 className="text-lg font-bold">
