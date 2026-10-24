@@ -43,3 +43,17 @@ export function reserveSlot(
     }
   );
 }
+export function cancelBooking(id) {
+  const token =
+    localStorage.getItem("token");
+
+  return axios.post(
+    `http://localhost:5000/api/reservations/cancel/${id}`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+}

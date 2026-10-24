@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { getMyBookings } from "../../api/customer";
+import {
+  getMyBookings,
+  cancelBooking,
+} from "../../api/customer";
 import {
   createReview,
   getReviewByReservation,
@@ -41,39 +44,65 @@ export default function Bookings() {
   }, []);
 
   async function handleReview(booking) {
-    try {
-      await createReview({
-        reservation_id: booking.id,
-        provider_id: booking.provider_id,
-        rating,
-        comment,
-      });
+  try {
+    await createReview({
+      reservation_id: booking.id,
+      provider_id: booking.provider_id,
+      rating,
+      comment,
+    });
 
-      alert("✅ Recensione inviata con successo");
+    alert("✅ Recensione inviata con successo");
 
-      setRating(5);
-      setComment("");
+    setRating(5);
+    setComment("");
 
-      const review =
-        await getReviewByReservation(
-          booking.id
-        );
-
-      if (review.data) {
-        setReviews((prev) => ({
-          ...prev,
-          [booking.id]: review.data,
-        }));
-      }
-    } catch (error) {
-      console.error(error);
-
-      alert(
-        error.response?.data?.error ||
-          "Errore durante l'invio della recensione"
+    const review =
+      await getReviewByReservation(
+        booking.id
       );
+
+    if (review.data) {
+      setReviews((prev) => ({
+        ...prev,
+        [booking.id]: review.data,
+      }));
     }
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      error.response?.data?.error ||
+      "Errore durante l'invio della recensione"
+    );
   }
+}
+
+async function handleCancel(id) {
+  try {
+    await cancelBooking(id);
+
+    setBookings((prev) =>
+      prev.map((booking) =>
+        booking.id === id
+          ? {
+              ...booking,
+              status: "cancelled",
+            }
+          : booking
+      )
+    );
+
+    alert("✅ Prenotazione annullata");
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      error.response?.data?.error ||
+      "Errore annullamento prenotazione"
+    );
+  }
+}
 
   return (
     <Layout>
@@ -113,11 +142,28 @@ export default function Bookings() {
             {booking.provider_name}
           </p>
 
-          <div className="mt-3">
-            <span className="px-3 py-1 rounded-full bg-green-100 text-green-800">
-              {booking.status}
-            </span>
-          </div>
+          <div className="mt-3 flex gap-3 items-center">
+  <span
+    className={
+      booking.status === "cancelled"
+        ? "px-3 py-1 rounded-full bg-red-100 text-red-800"
+        : "px-3 py-1 rounded-full bg-green-100 text-green-800"
+    }
+  >
+    {booking.status}
+  </span>
+
+  {booking.status !== "cancelled" && (
+    <button
+      onClick={() =>
+        handleCancel(booking.id)
+      }
+      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+    >
+      ❌ Annulla prenotazione
+    </button>
+  )}
+</div>
 
           <div className="mt-4 border-t pt-4">
             {reviews[booking.id] ? (
