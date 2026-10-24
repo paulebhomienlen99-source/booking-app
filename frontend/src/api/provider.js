@@ -71,7 +71,9 @@ export function getMyServices() {
 export function getProviderBookings() {
   return API.get("/bookings");
 }
-
+export function getProviderAnalytics() {
+  return API.get("/analytics");
+}
 /*
 =====================================
 PROVIDER PROFILE

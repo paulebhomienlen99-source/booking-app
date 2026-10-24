@@ -3,7 +3,8 @@ import {
   getProviderReviews,
   getProviderRating,
 } from "../../api/reviews";
-
+import { getProviderAnalytics }
+  from "../../api/provider";
 import Layout from "../../components/Layout";
 
 export default function ProviderDashboard() {
@@ -12,7 +13,14 @@ export default function ProviderDashboard() {
     average_rating: 0,
     total_reviews: 0,
   });
-
+const [analytics, setAnalytics] =
+  useState({
+    totalBookings: 0,
+    cancelledBookings: 0,
+    totalReviews: 0,
+    averageRating: 0,
+    totalRevenue: 0,
+  });
   useEffect(() => {
     const providerId = 1;
 
@@ -29,14 +37,71 @@ export default function ProviderDashboard() {
         setRating(res.data);
       })
       .catch(console.error);
-  }, []);
+  getProviderAnalytics()
+  .then((res) => {
+    setAnalytics(res.data);
+  })
+  .catch(console.error);
+    }, []);
 
   return (
     <Layout>
       <h2 className="text-xl font-bold mb-4">
         Benvenuto Provider
       </h2>
+<div className="grid grid-cols-5 gap-4 mb-8">
 
+  <div className="bg-white p-4 rounded shadow">
+    <h3 className="font-bold">
+      📦 Prenotazioni
+    </h3>
+
+    <p className="text-2xl mt-2">
+      {analytics.totalBookings}
+    </p>
+  </div>
+
+  <div className="bg-white p-4 rounded shadow">
+    <h3 className="font-bold">
+      ❌ Cancellate
+    </h3>
+
+    <p className="text-2xl mt-2">
+      {analytics.cancelledBookings}
+    </p>
+  </div>
+
+  <div className="bg-white p-4 rounded shadow">
+    <h3 className="font-bold">
+      ⭐ Recensioni
+    </h3>
+
+    <p className="text-2xl mt-2">
+      {analytics.totalReviews}
+    </p>
+  </div>
+
+  <div className="bg-white p-4 rounded shadow">
+    <h3 className="font-bold">
+      📈 Rating
+    </h3>
+
+    <p className="text-2xl mt-2">
+      {analytics.averageRating}
+    </p>
+  </div>
+
+  <div className="bg-white p-4 rounded shadow">
+    <h3 className="font-bold">
+      💰 Entrate
+    </h3>
+
+    <p className="text-2xl mt-2">
+      € {analytics.totalRevenue}
+    </p>
+  </div>
+
+</div>
       <div className="grid grid-cols-3 gap-6">
         <div className="p-4 bg-white shadow rounded">
           <h3 className="text-lg font-bold">

@@ -7,8 +7,8 @@ import {
   uploadDocument,
   approveProvider,
   getProviderReservations,
+  getProviderAnalytics,
 } from "../controllers/provider.controller.js";
-
 import {
   createListing,
   getMyServices,
@@ -86,5 +86,9 @@ router.get(
   auth,
   getProviderReservations
 );
-
+router.get(
+  "/analytics",
+  auth,
+  getProviderAnalytics
+);
 export default router;

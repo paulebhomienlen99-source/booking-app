@@ -129,3 +129,104 @@ export const getProviderReservationsService =
 
     return result.rows;
   };
+  export const getProviderAnalyticsService =
+  async (userId) => {
+
+    const providerResult =
+      await pool.query(
+        `
+        SELECT id
+        FROM providers
+        WHERE user_id = $1
+        LIMIT 1
+        `,
+        [userId]
+      );
+
+    if (
+      providerResult.rows.length === 0
+    ) {
+      return null;
+    }
+
+    const providerId =
+      providerResult.rows[0].id;
+
+    const bookings =
+      await pool.query(
+        `
+        SELECT
+          COUNT(*) AS total_bookings,
+          COUNT(*) FILTER (
+            WHERE status = 'cancelled'
+          ) AS cancelled_bookings
+        FROM reservations
+        WHERE provider_id = $1
+        `,
+        [providerId]
+      );
+
+    const reviews =
+      await pool.query(
+        `
+        SELECT
+          COUNT(*) AS total_reviews,
+          COALESCE(
+            ROUND(
+              AVG(rating)::numeric,
+              1
+            ),
+            0
+          ) AS average_rating
+        FROM reviews
+        WHERE provider_id = $1
+        `,
+        [providerId]
+      );
+
+    const revenue =
+      await pool.query(
+        `
+        SELECT
+          COALESCE(
+            SUM(s.price),
+            0
+          ) AS total_revenue
+        FROM reservations r
+        JOIN services s
+          ON s.id = r.listing_id
+        WHERE r.provider_id = $1
+          AND r.status = 'confirmed'
+        `,
+        [providerId]
+      );
+
+    return {
+      totalBookings:
+        Number(
+          bookings.rows[0]
+            .total_bookings
+        ),
+      cancelledBookings:
+        Number(
+          bookings.rows[0]
+            .cancelled_bookings
+        ),
+      totalReviews:
+        Number(
+          reviews.rows[0]
+            .total_reviews
+        ),
+      averageRating:
+        Number(
+          reviews.rows[0]
+            .average_rating
+        ),
+      totalRevenue:
+        Number(
+          revenue.rows[0]
+            .total_revenue
+        ),
+    };
+  };
+  

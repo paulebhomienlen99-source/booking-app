@@ -7,6 +7,7 @@ import {
   uploadDocumentService,
   approveProviderService,
   getProviderReservationsService,
+  getProviderAnalyticsService,
 } from "../services/provider.service.js";
 
 import { pool } from "../config/db.js";
@@ -149,6 +150,23 @@ export const getProviderReservations =
         );
 
       res.json(bookings);
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        error: "Internal server error",
+      });
+    }
+  };
+export const getProviderAnalytics =
+  async (req, res) => {
+    try {
+      const analytics =
+        await getProviderAnalyticsService(
+          req.user.id
+        );
+
+      res.json(analytics);
     } catch (error) {
       console.error(error);
 
