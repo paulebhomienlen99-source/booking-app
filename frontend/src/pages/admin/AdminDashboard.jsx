@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getStats } from "../../api/admin";
-
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +33,17 @@ export default function AdminDashboard() {
 
     loadStats();
   }, []);
-
+const bookingData = [
+  {
+    name: "Prenotazioni",
+    valore: stats?.reservations ?? 0,
+  },
+  {
+    name: "Cancellate",
+    valore:
+      stats?.cancelledReservations ?? 0,
+  },
+];
   if (loading) {
     return (
       <div style={{ padding: "20px" }}>
@@ -145,6 +163,38 @@ export default function AdminDashboard() {
       € {stats?.revenue ?? 0}
     </p>
   </div>
+<div
+  style={{
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    marginTop: "30px",
+  }}
+>
+  <h3>📊 Prenotazioni</h3>
+
+  <ResponsiveContainer
+    width="100%"
+    height={300}
+  >
+    <BarChart data={bookingData}>
+      <CartesianGrid
+        strokeDasharray="3 3"
+      />
+
+      <XAxis dataKey="name" />
+
+      <YAxis />
+
+      <Tooltip />
+
+      <Bar
+        dataKey="valore"
+        fill="#2563eb"
+      />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
 </div>
       <div style={{ marginTop: "30px" }}>
         <h2>Gestione</h2>
