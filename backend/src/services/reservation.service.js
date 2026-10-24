@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { sendMail } from "../config/email.js";
 
 export const createReservationService = async ({
   customer_id,
@@ -139,17 +140,27 @@ export const cancelReservationService = async (
     await db.query("BEGIN");
 
     const reservation = await db.query(
-      `
-      SELECT
-        id,
-        slot_id,
-        status
-      FROM reservations
-      WHERE id = $1
-      FOR UPDATE
-      `,
-      [reservation_id]
-    );
+  `
+  SELECT
+    r.id,
+    r.slot_id,
+    r.status,
+    r.provider_id,
+    s.title AS service_title,
+    u.email AS customer_email,
+    p.email AS provider_email
+  FROM reservations r
+  JOIN users u
+    ON u.id = r.customer_id
+  JOIN providers p
+    ON p.id = r.provider_id
+  JOIN services s
+    ON s.id = r.listing_id
+  WHERE r.id = $1
+  FOR UPDATE
+  `,
+  [reservation_id]
+);
 
     if (!reservation.rows.length) {
       throw new Error(
@@ -174,7 +185,49 @@ export const cancelReservationService = async (
       `,
       [reservation.rows[0].slot_id]
     );
+try {
+  await sendMail({
+    to: reservation.rows[0].customer_email,
+    subject: "Prenotazione annullata",
+    html: `
+      <h2>❌ Prenotazione annullata</h2>
 
+      <p>
+        La tua prenotazione per il servizio
+        <strong>
+          ${reservation.rows[0].service_title}
+        </strong>
+        è stata annullata con successo.
+      </p>
+    `,
+  });
+
+  await sendMail({
+    to: reservation.rows[0].provider_email,
+    subject:
+      "Prenotazione annullata dal cliente",
+    html: `
+      <h2>❌ Prenotazione annullata</h2>
+
+      <p>
+        Un cliente ha annullato una prenotazione
+        per il servizio
+        <strong>
+          ${reservation.rows[0].service_title}
+        </strong>.
+      </p>
+    `,
+  });
+
+  console.log(
+    "EMAIL CANCELLAZIONE INVIATE ✅"
+  );
+} catch (mailError) {
+  console.error(
+    "CANCEL EMAIL ERROR:",
+    mailError
+  );
+}
     await db.query("COMMIT");
 
     return {
