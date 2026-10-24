@@ -268,7 +268,17 @@ export async function captureOrder(
 
     const payment =
       paymentResult.rows[0];
+const userResult = await pool.query(
+  `
+  SELECT email
+  FROM users
+  WHERE id = $1
+  `,
+  [customerId]
+);
 
+const customerEmail =
+  userResult.rows[0]?.email;
     /*
      * Risposta idempotente:
      * non crea una seconda prenotazione.
@@ -380,7 +390,7 @@ export async function captureOrder(
   });
     try {
   await sendMail({
-  to: "bookhub.notifications@gmail.com",
+  to: customerEmail,
     subject: "Prenotazione confermata",
     html: `
       <h2>Prenotazione confermata ✅</h2>
@@ -388,11 +398,45 @@ export async function captureOrder(
       <p>ID prenotazione: ${reservation.id}</p>
     `,
   });
-console.log("EMAIL INVIATA ✅");
+const providerResult =
+  await pool.query(
+    `
+    SELECT email
+    FROM providers
+    WHERE id = $1
+    `,
+    [reservation.provider_id]
+  );
+
+const providerEmail =
+  providerResult.rows[0]?.email;
+
+if (providerEmail) {
+  await sendMail({
+    to: providerEmail,
+    subject: "Nuova prenotazione ricevuta",
+    html: `
+      <h2>✅ Nuova prenotazione ricevuta</h2>
+
+      <p>
+        Hai ricevuto una nuova prenotazione.
+      </p>
+
+      <p>
+        ID prenotazione:
+        ${reservation.id}
+      </p>
+    `,
+  });
 
   console.log(
-    "EMAIL TEST INVIATA"
+    "EMAIL PROVIDER INVIATA ✅"
   );
+}
+  console.log("EMAIL INVIATA ✅");
+console.log("EMAIL PROVIDER INVIATA ✅");
+
+  
 } catch (mailError) {
   console.error(
     "EMAIL ERROR:",
