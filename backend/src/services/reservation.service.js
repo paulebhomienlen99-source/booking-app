@@ -197,13 +197,17 @@ export const getMyReservationsService =
       SELECT
         r.id,
         r.status,
-        s.title,
+        s.title AS service_title,
+        p.name AS provider_name,
         sl.slot_date,
         sl.start_time,
-        sl.end_time
+        sl.end_time,
+        r.provider_id
       FROM reservations r
       JOIN services s
         ON s.id = r.listing_id
+      JOIN providers p
+        ON p.id = r.provider_id
       JOIN availability_slots sl
         ON sl.id = r.slot_id
       WHERE r.customer_id = $1
