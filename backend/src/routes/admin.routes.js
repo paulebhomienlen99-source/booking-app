@@ -347,15 +347,87 @@ router.get("/stats", async (req, res) => {
       `SELECT COUNT(*) FROM services`
     );
 
+    const reservations =
+      await pool.query(
+        `SELECT COUNT(*) FROM reservations`
+      );
+
+    const cancelledReservations =
+      await pool.query(
+        `
+        SELECT COUNT(*)
+        FROM reservations
+        WHERE status = 'cancelled'
+        `
+      );
+
+    const reviews =
+      await pool.query(
+        `SELECT COUNT(*) FROM reviews`
+      );
+
+    const revenue =
+      await pool.query(
+        `
+        SELECT COALESCE(
+          SUM(s.price),
+          0
+        ) AS revenue
+        FROM reservations r
+        JOIN services s
+          ON s.id = r.listing_id
+        WHERE r.status = 'confirmed'
+        `
+      );
+
+    const approvedProviders =
+      await pool.query(
+        `
+        SELECT COUNT(*)
+        FROM providers
+        WHERE approved = true
+        `
+      );
+
     res.json({
       success: true,
       stats: {
-        users: Number(users.rows[0].count),
+        users: Number(
+          users.rows[0].count
+        ),
+
         providers: Number(
           providers.rows[0].count
         ),
+
+        approvedProviders:
+          Number(
+            approvedProviders
+              .rows[0].count
+          ),
+
         services: Number(
           services.rows[0].count
+        ),
+
+        reservations:
+          Number(
+            reservations
+              .rows[0].count
+          ),
+
+        cancelledReservations:
+          Number(
+            cancelledReservations
+              .rows[0].count
+          ),
+
+        reviews: Number(
+          reviews.rows[0].count
+        ),
+
+        revenue: Number(
+          revenue.rows[0].revenue
         ),
       },
     });
@@ -368,5 +440,4 @@ router.get("/stats", async (req, res) => {
     });
   }
 });
-
 export default router;

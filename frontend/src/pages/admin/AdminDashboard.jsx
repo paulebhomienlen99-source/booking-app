@@ -39,74 +39,113 @@ export default function AdminDashboard() {
       <h1>Dashboard Admin</h1>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "20px",
-          marginTop: "20px",
-        }}
-      >
-        <div
-          style={{
-            padding: "20px",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            background: "#fff",
-          }}
-        >
-          <h3>Utenti Totali</h3>
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "20px",
+    marginTop: "20px",
+  }}
+>
+  <div style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}>
+    <h3>Utenti Totali</h3>
+    <p style={{ fontSize: "28px", fontWeight: "bold" }}>
+      {stats?.users ?? 0}
+    </p>
+  </div>
 
-          <p
-            style={{
-              fontSize: "28px",
-              fontWeight: "bold",
-            }}
-          >
-            {stats?.users ?? 0}
-          </p>
-        </div>
+  <div style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}>
+    <h3>Provider Totali</h3>
+    <p style={{ fontSize: "28px", fontWeight: "bold" }}>
+      {stats?.providers ?? 0}
+    </p>
+  </div>
 
-        <div
-          style={{
-            padding: "20px",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            background: "#fff",
-          }}
-        >
-          <h3>Provider Totali</h3>
+  <div style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}>
+    <h3>Servizi Totali</h3>
+    <p style={{ fontSize: "28px", fontWeight: "bold" }}>
+      {stats?.services ?? 0}
+    </p>
+  </div>
 
-          <p
-            style={{
-              fontSize: "28px",
-              fontWeight: "bold",
-            }}
-          >
-            {stats?.providers ?? 0}
-          </p>
-        </div>
+  <div style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}>
+    <h3>Provider Approvati</h3>
+    <p style={{ fontSize: "28px", fontWeight: "bold" }}>
+      {stats?.approvedProviders ?? 0}
+    </p>
+  </div>
 
-        <div
-          style={{
-            padding: "20px",
-            border: "1px solid #ddd",
-            borderRadius: "8px",
-            background: "#fff",
-          }}
-        >
-          <h3>Servizi Totali</h3>
+  <div style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}>
+    <h3>Prenotazioni Totali</h3>
+    <p style={{ fontSize: "28px", fontWeight: "bold" }}>
+      {stats?.reservations ?? 0}
+    </p>
+  </div>
 
-          <p
-            style={{
-              fontSize: "28px",
-              fontWeight: "bold",
-            }}
-          >
-            {stats?.services ?? 0}
-          </p>
-        </div>
-      </div>
+  <div style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}>
+    <h3>Prenotazioni Cancellate</h3>
+    <p style={{ fontSize: "28px", fontWeight: "bold" }}>
+      {stats?.cancelledReservations ?? 0}
+    </p>
+  </div>
 
+  <div style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}>
+    <h3>Recensioni Totali</h3>
+    <p style={{ fontSize: "28px", fontWeight: "bold" }}>
+      {stats?.reviews ?? 0}
+    </p>
+  </div>
+
+  <div style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}>
+    <h3>Ricavi Globali</h3>
+    <p style={{
+      fontSize: "28px",
+      fontWeight: "bold",
+      color: "#16a34a",
+    }}>
+      € {stats?.revenue ?? 0}
+    </p>
+  </div>
+</div>
       <div style={{ marginTop: "30px" }}>
         <h2>Gestione</h2>
 
