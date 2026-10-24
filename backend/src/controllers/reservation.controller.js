@@ -1,6 +1,7 @@
 import {
   createReservationService,
   cancelReservationService,
+  getMyReservationsService,
 } from "../services/reservation.service.js";
 
 export const createReservation = async (
@@ -48,3 +49,25 @@ export const cancelReservation = async (
     });
   }
 };
+
+export const getMyReservations =
+  async (req, res) => {
+    try {
+      const result =
+        await getMyReservationsService(
+          req.user.id
+        );
+
+      res.json(result);
+    } catch (error) {
+      console.error(
+        "MY RESERVATIONS ERROR:",
+        error
+      );
+
+      res.status(500).json({
+        error:
+          "Errore recupero prenotazioni",
+      });
+    }
+  };

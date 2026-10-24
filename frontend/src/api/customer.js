@@ -9,11 +9,16 @@ export function getAllServices() {
 }
 
 export function getMyBookings() {
-  const customerId =
-    localStorage.getItem("userId");
+  const token =
+    localStorage.getItem("token");
 
   return axios.get(
-    `http://localhost:5000/api/customers/${customerId}/reservations`
+    "http://localhost:5000/api/reservations/my",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
   );
 }
 

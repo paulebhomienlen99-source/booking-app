@@ -190,3 +190,27 @@ export const cancelReservationService = async (
     db.release();
   }
 };
+export const getMyReservationsService =
+  async (customerId) => {
+    const result = await pool.query(
+      `
+      SELECT
+        r.id,
+        r.status,
+        s.title,
+        sl.slot_date,
+        sl.start_time,
+        sl.end_time
+      FROM reservations r
+      JOIN services s
+        ON s.id = r.listing_id
+      JOIN availability_slots sl
+        ON sl.id = r.slot_id
+      WHERE r.customer_id = $1
+      ORDER BY sl.slot_date DESC
+      `,
+      [customerId]
+    );
+
+    return result.rows;
+  };
