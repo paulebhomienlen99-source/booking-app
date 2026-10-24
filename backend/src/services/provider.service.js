@@ -82,7 +82,28 @@ export const approveProviderService = async (
 };
 
 export const getProviderReservationsService =
-  async (provider_id) => {
+  async (userId) => {
+
+    const providerResult =
+      await pool.query(
+        `
+        SELECT id
+        FROM providers
+        WHERE user_id = $1
+        LIMIT 1
+        `,
+        [userId]
+      );
+
+    if (
+      providerResult.rows.length === 0
+    ) {
+      return [];
+    }
+
+    const providerId =
+      providerResult.rows[0].id;
+
     const result = await pool.query(
       `
       SELECT
@@ -103,7 +124,7 @@ export const getProviderReservationsService =
       WHERE r.provider_id = $1
       ORDER BY r.created_at DESC
       `,
-      [provider_id]
+      [providerId]
     );
 
     return result.rows;
