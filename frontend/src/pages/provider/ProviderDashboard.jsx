@@ -6,7 +6,15 @@ import {
 import { getProviderAnalytics }
   from "../../api/provider";
 import Layout from "../../components/Layout";
-
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 export default function ProviderDashboard() {
   const [reviews, setReviews] = useState([]);
   const [rating, setRating] = useState({
@@ -43,7 +51,16 @@ const [analytics, setAnalytics] =
   })
   .catch(console.error);
     }, []);
-
+const chartData = [
+  {
+    name: "Prenotazioni",
+    valore: analytics.totalBookings,
+  },
+  {
+    name: "Cancellate",
+    valore: analytics.cancelledBookings,
+  },
+];
   return (
     <Layout>
       <h2 className="text-xl font-bold mb-4">
@@ -102,7 +119,37 @@ const [analytics, setAnalytics] =
   </div>
 
 </div>
-      <div className="grid grid-cols-3 gap-6">
+
+<div className="bg-white p-6 rounded shadow mb-8">
+  <h3 className="text-xl font-bold mb-4">
+    📊 Andamento prenotazioni
+  </h3>
+
+  <ResponsiveContainer
+    width="100%"
+    height={300}
+  >
+    <BarChart data={chartData}>
+      <CartesianGrid
+        strokeDasharray="3 3"
+      />
+
+      <XAxis dataKey="name" />
+
+      <YAxis />
+
+      <Tooltip />
+
+      <Bar
+  dataKey="valore"
+  radius={[8, 8, 0, 0]}
+  fill="#2563eb"
+/>
+    </BarChart>
+  </ResponsiveContainer>
+</div>
+
+<div className="grid grid-cols-3 gap-6">
         <div className="p-4 bg-white shadow rounded">
           <h3 className="text-lg font-bold">
             Documenti
