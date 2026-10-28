@@ -52,10 +52,16 @@ router.post("/auth/login", async (req, res) => {
     const admin = result.rows[0];
 console.log("ADMIN:", admin);
 console.log("PASSWORD HASH:", admin.password_hash);
-    const passwordMatch = await bcrypt.compare(
-      password,
-      admin.password_hash
-    );
+    console.log("ADMIN:", admin);
+console.log("HASH:", admin.password_hash);
+
+const passwordMatch = await bcrypt.compare(
+  password,
+  admin.password_hash
+);
+
+console.log("PASSWORD MATCH:", passwordMatch);
+
 console.log(
   "PASSWORD MATCH:",
   passwordMatch
