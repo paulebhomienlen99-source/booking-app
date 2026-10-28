@@ -21,7 +21,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://booking-app-lovat-theta.vercel.app",
+      "https://booking-app-sigma-two.vercel.app"
     ],
     credentials: true,
     methods: [
