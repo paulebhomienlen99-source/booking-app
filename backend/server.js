@@ -19,7 +19,10 @@ const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://booking-app-lovat-theta.vercel.app",
+    ],
     credentials: true,
     methods: [
       "GET",
