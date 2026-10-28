@@ -10,6 +10,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import ProvidersPending from "./pages/admin/ProvidersPending";
 import ServicesPending from "./pages/admin/ServicesPending";
 import AdminReservations from "./pages/admin/AdminReservations";
+import AdminLogin from "./pages/admin/AdminLogin";
 // PROVIDER
 import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderSetup from "./pages/provider/ProviderSetup";
@@ -62,7 +63,10 @@ export default function App() {
           path="/register"
           element={<Register />}
         />
-
+<Route
+  path="/admin/login"
+  element={<AdminLogin />}
+/>
         {/* ADMIN */}
         <Route
           path="/admin"
