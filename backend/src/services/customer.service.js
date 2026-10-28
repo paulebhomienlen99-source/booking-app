@@ -11,8 +11,8 @@ export const getCustomerReservationsService = async (
 
       s.title AS service_title,
 
-     p.id AS provider_id,
-p.name AS provider_name,
+      p.id AS provider_id,
+      p.name AS provider_name,
 
       sl.slot_date,
       sl.start_time,

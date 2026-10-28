@@ -3,8 +3,10 @@ import {
   getProviderReviews,
   getProviderRating,
 } from "../../api/reviews";
-import { getProviderAnalytics }
-  from "../../api/provider";
+import {
+  getProviderAnalytics,
+  getProviderBookings,
+} from "../../api/provider";
 import Layout from "../../components/Layout";
 import {
   BarChart,
@@ -23,13 +25,17 @@ export default function ProviderDashboard() {
     average_rating: 0,
     total_reviews: 0,
   });
-const [analytics, setAnalytics] =
+const [bookings, setBookings] =
+  useState([]);
+  const [analytics, setAnalytics] =
   useState({
     totalBookings: 0,
     cancelledBookings: 0,
     totalReviews: 0,
     averageRating: 0,
     totalRevenue: 0,
+    totalCustomers: 0,
+    topService: "",
     monthlyRevenue: [],
   });
   useEffect(() => {
@@ -50,10 +56,24 @@ const [analytics, setAnalytics] =
       .catch(console.error);
   getProviderAnalytics()
   .then((res) => {
-    setAnalytics(res.data);
+    setAnalytics(
+      res.data || {
+        totalBookings: 0,
+        cancelledBookings: 0,
+        totalReviews: 0,
+        averageRating: 0,
+        totalRevenue: 0,
+        monthlyRevenue: [],
+      }
+    );
   })
   .catch(console.error);
-    }, []);
+ getProviderBookings()
+  .then((res) => {
+    setBookings(res.data);
+  })
+  .catch(console.error);   
+}, []);
 const chartData = [
   {
     name: "Prenotazioni",
@@ -112,14 +132,24 @@ const chartData = [
   </div>
 
   <div className="bg-white p-4 rounded shadow">
-    <h3 className="font-bold">
-      💰 Entrate
-    </h3>
+  <h3 className="font-bold">
+    👥 Clienti
+  </h3>
 
-    <p className="text-2xl mt-2">
-      € {analytics.totalRevenue}
-    </p>
-  </div>
+  <p className="text-2xl mt-2">
+    {analytics.totalCustomers}
+  </p>
+</div>
+
+<div className="bg-white p-4 rounded shadow">
+  <h3 className="font-bold">
+    🏆 Top Service
+  </h3>
+
+  <p className="text-lg mt-2">
+    {analytics.topService}
+  </p>
+</div>
 
 </div>
 
@@ -210,7 +240,50 @@ const chartData = [
           </p>
         </div>
       </div>
+<div className="bg-white p-6 rounded shadow mb-8">
+  <h3 className="text-xl font-bold mb-4">
+    📋 Ultime Prenotazioni
+  </h3>
 
+  {bookings.length === 0 ? (
+    <p>
+      Nessuna prenotazione ricevuta.
+    </p>
+  ) : (
+    bookings
+      .slice(0, 5)
+      .map((booking) => (
+        <div
+          key={booking.id}
+          className="border rounded p-3 mb-3"
+        >
+          <p>
+            <strong>
+              {booking.service_title}
+            </strong>
+          </p>
+
+          <p>
+            Cliente:
+            {" "}
+            {booking.customer_email}
+          </p>
+
+          <p>
+            Data:
+            {" "}
+            {booking.slot_date}
+          </p>
+
+          <p>
+            Stato:
+            {" "}
+            {booking.status}
+          </p>
+        </div>
+      ))
+  )}
+</div>
       <div className="mt-8 p-6 bg-white rounded shadow">
         <h3 className="text-xl font-bold mb-4">
           ⭐ Recensioni ricevute

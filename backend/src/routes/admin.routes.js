@@ -180,10 +180,12 @@ router.put("/providers/:id/approve", async (req, res) => {
 
     const result = await pool.query(
       `
-      UPDATE providers
-      SET approved = true
-      WHERE id = $1
-      RETURNING *
+    UPDATE providers
+SET
+  approved = true,
+  status = 'approved'
+WHERE id = $1
+RETURNING *
       `,
       [id]
     );
@@ -388,7 +390,34 @@ router.get("/stats", async (req, res) => {
         WHERE approved = true
         `
       );
+const monthlyRevenue =
+  await pool.query(
+    `
+    SELECT
+      TO_CHAR(
+        DATE_TRUNC('month', r.created_at),
+        'Mon'
+      ) AS month,
 
+      COALESCE(
+        SUM(s.price),
+        0
+      ) AS revenue
+
+    FROM reservations r
+
+    JOIN services s
+      ON s.id = r.listing_id
+
+    WHERE r.status = 'confirmed'
+
+    GROUP BY
+      DATE_TRUNC('month', r.created_at)
+
+    ORDER BY
+      DATE_TRUNC('month', r.created_at)
+    `
+  );
     res.json({
       success: true,
       stats: {
@@ -427,9 +456,42 @@ router.get("/stats", async (req, res) => {
         ),
 
         revenue: Number(
-          revenue.rows[0].revenue
-        ),
+  revenue.rows[0].revenue
+),
+
+monthlyRevenue:
+  monthlyRevenue.rows,
       },
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+router.get("/reservations", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        r.id,
+        r.status,
+        r.created_at,
+        u.email AS customer_name,
+        s.title AS service_name
+      FROM reservations r
+      JOIN users u
+        ON u.id = r.customer_id
+      JOIN services s
+        ON s.id = r.listing_id
+      ORDER BY r.created_at DESC
+    `);
+
+    res.json({
+      success: true,
+      reservations: result.rows,
     });
   } catch (error) {
     console.error(error);

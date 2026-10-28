@@ -9,7 +9,7 @@ import {
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ProvidersPending from "./pages/admin/ProvidersPending";
 import ServicesPending from "./pages/admin/ServicesPending";
-
+import AdminReservations from "./pages/admin/AdminReservations";
 // PROVIDER
 import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderSetup from "./pages/provider/ProviderSetup";
@@ -90,6 +90,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/admin/reservations"
+  element={
+    <ProtectedRoute role="admin">
+      <AdminReservations />
+    </ProtectedRoute>
+  }
+/>
         {/* PROVIDER */}
 
 <Route

@@ -5,6 +5,7 @@ export const createListingService = async ({
   title,
   description,
   price,
+  image_url,
 }) => {
   const result = await pool.query(
     `
@@ -13,9 +14,10 @@ export const createListingService = async ({
       title,
       description,
       price,
-      status
+      approved,
+      image_url
     )
-    VALUES ($1, $2, $3, $4, 'pending')
+    VALUES ($1, $2, $3, $4, false, $5)
     RETURNING *
     `,
     [
@@ -23,13 +25,12 @@ export const createListingService = async ({
       title,
       description,
       price,
+      image_url,
     ]
   );
 
   return result.rows[0];
 };
-
-// NUOVA FUNZIONE DA AGGIUNGERE QUI
 
 export const getProviderServicesService = async (
   provider_id
@@ -40,10 +41,11 @@ export const getProviderServicesService = async (
       id,
       title,
       price,
-      description
+      description,
+      image_url,
+      approved
     FROM services
     WHERE provider_id = $1
-    AND status = 'approved'
     ORDER BY title
     `,
     [provider_id]

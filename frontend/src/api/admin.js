@@ -7,6 +7,7 @@ const API = axios.create({
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -14,10 +15,22 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+/*
+=====================================
+ADMIN STATS
+=====================================
+*/
+
 export async function getStats() {
   const response = await API.get("/stats");
   return response.data;
 }
+
+/*
+=====================================
+PENDING PROVIDERS
+=====================================
+*/
 
 export async function getPendingProviders() {
   const response = await API.get(
@@ -43,6 +56,12 @@ export async function rejectProvider(id) {
   return response.data;
 }
 
+/*
+=====================================
+PENDING SERVICES
+=====================================
+*/
+
 export async function getPendingServices() {
   const response = await API.get(
     "/services/pending"
@@ -58,3 +77,25 @@ export async function approveService(id) {
 
   return response.data;
 }
+
+export async function rejectService(id) {
+  const response = await API.put(
+    `/services/${id}/reject`
+  );
+
+  return response.data;
+}
+
+/*
+=====================================
+ADMIN RESERVATIONS
+=====================================
+*/
+
+export async function getReservations() {
+  const response =
+    await API.get("/reservations");
+
+  return response.data;
+}
+

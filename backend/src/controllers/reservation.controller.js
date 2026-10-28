@@ -52,11 +52,21 @@ export const cancelReservation = async (
 
 export const getMyReservations =
   async (req, res) => {
+    console.log(
+      "USER FROM JWT:",
+      req.user
+    );
+
     try {
       const result =
         await getMyReservationsService(
           req.user.id
         );
+
+      console.log(
+        "MY RESERVATIONS:",
+        result.length
+      );
 
       res.json(result);
     } catch (error) {

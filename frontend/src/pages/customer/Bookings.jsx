@@ -16,9 +16,15 @@ export default function Bookings() {
   const [reviews, setReviews] = useState({});
 
   useEffect(() => {
-    getMyBookings()
-      .then((res) => {
-        setBookings(res.data);
+  getMyBookings()
+    .then((res) => {
+
+      console.log(
+        "BOOKINGS RESPONSE:",
+        res.data
+      );
+
+      setBookings(res.data);
 
         res.data.forEach(async (booking) => {
           try {
@@ -106,7 +112,7 @@ async function handleCancel(id) {
 
   return (
     <Layout>
-      <h2 className="text-xl font-bold mb-4">
+      <h2 className="text-3xl font-bold mb-6">
         Le mie prenotazioni
       </h2>
 
@@ -116,128 +122,134 @@ async function handleCancel(id) {
         </div>
       )}
 
-      {bookings.map((booking) => (
-        <div
-          key={booking.id}
-          className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm mb-4"
-        >
-          <h3 className="text-xl font-bold mb-2">
-            {booking.service_title}
-          </h3>
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-          <p>
-            📅{" "}
-            {new Date(
-              booking.slot_date
-            ).toLocaleDateString("it-IT")}
-          </p>
-
-          <p>
-            🕒 {booking.start_time} -{" "}
-            {booking.end_time}
-          </p>
-
-          <p>
-            👤 Provider:{" "}
-            {booking.provider_name}
-          </p>
-
-          <div className="mt-3 flex gap-3 items-center">
-  <span
-    className={
-      booking.status === "cancelled"
-        ? "px-3 py-1 rounded-full bg-red-100 text-red-800"
-        : "px-3 py-1 rounded-full bg-green-100 text-green-800"
-    }
-  >
-    {booking.status}
-  </span>
-
-  {booking.status !== "cancelled" && (
-    <button
-      onClick={() =>
-        handleCancel(booking.id)
-      }
-      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+  {bookings.map((booking) => (
+    <div
+      key={booking.id}
+      className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition p-5 flex flex-col h-full"
     >
-      ❌ Annulla prenotazione
-    </button>
-  )}
-</div>
+      <h3 className="text-xl font-bold mb-3">
+        {booking.service_title}
+      </h3>
 
-          <div className="mt-4 border-t pt-4">
-            {reviews[booking.id] ? (
-              <div>
-                <p className="text-green-600 font-semibold mb-2">
-                  ✅ Recensione già inviata
-                </p>
+      <p className="mb-1">
+        📅{" "}
+        {new Date(
+          booking.slot_date
+        ).toLocaleDateString("it-IT")}
+      </p>
 
-                <p>
-                  {"⭐".repeat(
-                    reviews[booking.id].rating
-                  )}
-                </p>
+      <p className="mb-1">
+        🕒 {booking.start_time} - {booking.end_time}
+      </p>
 
-                <p className="mt-2">
-                  {reviews[booking.id].comment}
-                </p>
-              </div>
-            ) : (
-              <>
-                <h4 className="font-semibold mb-2">
-                  ⭐ Lascia una recensione
-                </h4>
+      <p className="mb-3">
+        👤 Provider: {booking.provider_name}
+      </p>
 
-                <select
-                  className="border p-2 rounded w-full mb-2"
-                  value={rating}
-                  onChange={(e) =>
-                    setRating(
-                      Number(e.target.value)
-                    )
-                  }
-                >
-                  <option value={5}>
-                    ⭐⭐⭐⭐⭐ (5)
-                  </option>
-                  <option value={4}>
-                    ⭐⭐⭐⭐ (4)
-                  </option>
-                  <option value={3}>
-                    ⭐⭐⭐ (3)
-                  </option>
-                  <option value={2}>
-                    ⭐⭐ (2)
-                  </option>
-                  <option value={1}>
-                    ⭐ (1)
-                  </option>
-                </select>
+      <div className="mt-2 flex flex-col gap-3">
+        <span
+          className={
+            booking.status === "cancelled"
+              ? "inline-block px-3 py-1 rounded-full bg-red-100 text-red-700 font-semibold text-center"
+              : "inline-block px-3 py-1 rounded-full bg-green-100 text-green-700 font-semibold text-center"
+          }
+        >
+          {booking.status}
+        </span>
 
-                <textarea
-                  className="border p-2 rounded w-full mb-2"
-                  placeholder="Scrivi una recensione..."
-                  value={comment}
-                  onChange={(e) =>
-                    setComment(
-                      e.target.value
-                    )
-                  }
-                />
+        {booking.status !== "cancelled" && (
+          <button
+            onClick={() =>
+              handleCancel(booking.id)
+            }
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-semibold transition"
+          >
+            ❌ Annulla Prenotazione
+          </button>
+        )}
+      </div>
 
-                <button
-                  onClick={() =>
-                    handleReview(booking)
-                  }
-                  className="bg-yellow-500 text-white px-4 py-2 rounded"
-                >
-                  Invia recensione
-                </button>
-              </>
-            )}
+      <div className="mt-5 border-t pt-4">
+        {reviews[booking.id] ? (
+          <div>
+            <p className="text-green-600 font-semibold mb-2">
+              ✅ Recensione già inviata
+            </p>
+
+            <p>
+              {"⭐".repeat(
+                reviews[booking.id].rating
+              )}
+            </p>
+
+            <p className="mt-2">
+              {reviews[booking.id].comment}
+            </p>
           </div>
-        </div>
-      ))}
+        ) : (
+          <>
+            <h4 className="font-semibold mb-3">
+              ⭐ Lascia una recensione
+            </h4>
+
+            <select
+              className="border p-2 rounded w-full mb-3"
+              value={rating}
+              onChange={(e) =>
+                setRating(
+                  Number(e.target.value)
+                )
+              }
+            >
+              <option value={5}>
+                ⭐⭐⭐⭐⭐ (5)
+              </option>
+
+              <option value={4}>
+                ⭐⭐⭐⭐ (4)
+              </option>
+
+              <option value={3}>
+                ⭐⭐⭐ (3)
+              </option>
+
+              <option value={2}>
+                ⭐⭐ (2)
+              </option>
+
+              <option value={1}>
+                ⭐ (1)
+              </option>
+            </select>
+
+            <textarea
+              className="border p-2 rounded w-full mb-3"
+              placeholder="Scrivi una recensione..."
+              value={comment}
+              onChange={(e) =>
+                setComment(
+                  e.target.value
+                )
+              }
+            />
+
+            <button
+              onClick={() =>
+                handleReview(booking)
+              }
+              className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-semibold transition shadow-md"
+            >
+              Invia Recensione
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  ))}
+
+</div>
     </Layout>
   );
 }

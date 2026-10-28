@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getStats } from "../../api/admin";
+import {
+  getStats,
+  getReservations,
+} from "../../api/admin";
 import {
   ResponsiveContainer,
   BarChart,
@@ -13,7 +16,8 @@ import {
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-
+const [reservations, setReservations] =
+  useState([]);
   useEffect(() => {
     const loadStats = async () => {
       try {
@@ -22,8 +26,15 @@ export default function AdminDashboard() {
         console.log("STATS RESPONSE:", data);
 
         if (data.success) {
-          setStats(data.stats);
-        }
+  setStats(data.stats);
+
+  const reservationsData =
+    await getReservations();
+
+  setReservations(
+    reservationsData.reservations || []
+  );
+}
       } catch (error) {
         console.error("STATS ERROR:", error);
       } finally {
@@ -44,7 +55,24 @@ const bookingData = [
       stats?.cancelledReservations ?? 0,
   },
 ];
-  if (loading) {
+  const revenueData =
+  stats?.monthlyRevenue ?? [];
+
+console.log("STATS:", stats);
+console.log(
+  "MONTHLY REVENUE:",
+  revenueData
+);
+
+console.log(
+  "MONTHLY REVENUE:",
+  revenueData
+);
+console.log(
+  "RESERVATIONS:",
+  reservations
+);
+if (loading) {
     return (
       <div style={{ padding: "20px" }}>
         <h2>Caricamento statistiche...</h2>
@@ -196,6 +224,38 @@ const bookingData = [
   </ResponsiveContainer>
 </div>
 </div>
+    <div
+  style={{
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    marginTop: "30px",
+  }}
+>
+  <h3>💰 Ricavi Mensili</h3>
+
+  <ResponsiveContainer
+    width="100%"
+    height={300}
+  >
+    <BarChart data={revenueData}>
+      <CartesianGrid
+        strokeDasharray="3 3"
+      />
+
+      <XAxis dataKey="month" />
+
+      <YAxis />
+
+      <Tooltip />
+
+      <Bar
+        dataKey="revenue"
+        fill="#16a34a"
+      />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
       <div style={{ marginTop: "30px" }}>
         <h2>Gestione</h2>
 
@@ -230,9 +290,78 @@ const bookingData = [
             }}
           >
             Services Pending
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+</Link>
+</div>
+</div>
+
+<div
+  style={{
+    marginTop: "40px",
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+  }}
+>
+  <h2>Prenotazioni Recenti</h2>
+
+  <table
+    style={{
+      width: "100%",
+      borderCollapse: "collapse",
+      marginTop: "15px",
+    }}
+  >
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Cliente</th>
+        <th>Servizio</th>
+        <th>Stato</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {reservations.map((r) => (
+        <tr key={r.id}>
+          <td>{r.id}</td>
+          <td>{r.customer_name}</td>
+          <td>{r.service_name}</td>
+          <td>
+  <span
+    style={{
+      padding: "4px 10px",
+      borderRadius: "999px",
+      fontWeight: "bold",
+      background:
+        r.status === "confirmed"
+          ? "#dcfce7"
+          : r.status === "pending"
+          ? "#fef9c3"
+          : "#fee2e2",
+      color:
+        r.status === "confirmed"
+          ? "#166534"
+          : r.status === "pending"
+          ? "#854d0e"
+          : "#991b1b",
+    }}
+  >
+    {r.status}
+  </span>
+</td>
+          <td>
+            {new Date(
+              r.created_at
+            ).toLocaleDateString()}
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+</div>
+);
 }

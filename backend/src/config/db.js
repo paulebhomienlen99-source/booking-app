@@ -5,23 +5,23 @@ const { Pool } = pg;
 
 export const pool = new Pool({
   connectionString: DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 /*
 =================================================
-DATABASE CONNECTION
+POOL ERROR HANDLER
 =================================================
 */
 
-if (process.env.NODE_ENV !== "test") {
-  pool.connect()
-    .then(() => {
-      console.log("Database connected");
-    })
-    .catch((err) => {
-      console.error("Database connection error:", err);
-    });
-}
+pool.on("error", (err) => {
+  console.error(
+    "Unexpected database error:",
+    err
+  );
+});
 
 /*
 =================================================
@@ -35,7 +35,10 @@ process.on("SIGINT", async () => {
     console.log("Database pool closed");
     process.exit(0);
   } catch (err) {
-    console.error("Error closing database pool:", err);
+    console.error(
+      "Error closing database pool:",
+      err
+    );
     process.exit(1);
   }
 });
@@ -46,7 +49,10 @@ process.on("SIGTERM", async () => {
     console.log("Database pool closed");
     process.exit(0);
   } catch (err) {
-    console.error("Error closing database pool:", err);
+    console.error(
+      "Error closing database pool:",
+      err
+    );
     process.exit(1);
   }
 });

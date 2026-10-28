@@ -21,11 +21,11 @@ export const createReservationService = async ({
     const listing = await db.query(
       `
       SELECT
-        s.id,
-        s.provider_id,
-        s.status,
-        p.status AS provider_status
-      FROM services s
+  s.id,
+  s.provider_id,
+  s.approved,
+  p.status AS provider_status
+FROM services s
       JOIN providers p
         ON p.id = s.provider_id
       WHERE s.id = $1
@@ -39,13 +39,13 @@ export const createReservationService = async ({
     }
 
     if (
-      listing.rows[0].status !== "approved" ||
-      listing.rows[0].provider_status !== "approved"
-    ) {
-      throw new Error(
-        "Provider or listing is not approved"
-      );
-    }
+  !listing.rows[0].approved ||
+  listing.rows[0].provider_status !== "approved"
+) {
+  throw new Error(
+    "Provider or listing is not approved"
+  );
+}
 
     const slot = await db.query(
       `

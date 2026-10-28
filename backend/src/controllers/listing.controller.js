@@ -1,3 +1,5 @@
+import streamifier from "streamifier";
+import cloudinary from "../config/cloudinary.js";
 import { pool } from "../config/db.js";
 
 import {
@@ -10,6 +12,9 @@ export const createListing = async (
   res
 ) => {
   try {
+   console.log("BODY:", req.body);
+console.log("FILE:", req.file);
+console.log("USER:", req.user); 
     const providerResult =
       await pool.query(
         `
@@ -31,9 +36,44 @@ export const createListing = async (
     const providerId =
       providerResult.rows[0].id;
 
+    let image_url = null;
+
+    if (req.file) {
+      const uploadResult =
+        await new Promise(
+          (resolve, reject) => {
+            const uploadStream =
+              cloudinary.uploader.upload_stream(
+                {
+                  folder:
+                    "booking-app/services",
+                },
+                (error, result) => {
+                  if (error) {
+                    reject(error);
+                    return;
+                  }
+
+                  resolve(result);
+                }
+              );
+
+            streamifier
+              .createReadStream(
+                req.file.buffer
+              )
+              .pipe(uploadStream);
+          }
+        );
+
+      image_url =
+        uploadResult.secure_url;
+    }
+
     const result =
       await createListingService({
         provider_id: providerId,
+        image_url,
         ...req.body,
       });
 

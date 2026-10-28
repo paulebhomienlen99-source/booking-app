@@ -6,13 +6,15 @@ export default function CreateListing() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [image, setImage] = useState(null);
 
   async function handleCreate() {
     try {
       await createListing(
         title,
         description,
-        price
+        price,
+        image
       );
 
       alert("Servizio creato!");
@@ -20,6 +22,7 @@ export default function CreateListing() {
       setTitle("");
       setDescription("");
       setPrice("");
+      setImage(null);
     } catch (err) {
       console.error(err);
       alert("Errore nella creazione del servizio");
@@ -57,6 +60,15 @@ export default function CreateListing() {
         value={price}
         onChange={(e) =>
           setPrice(e.target.value)
+        }
+      />
+
+      <input
+        type="file"
+        accept="image/*"
+        className="border p-2 w-full mb-3"
+        onChange={(e) =>
+          setImage(e.target.files[0])
         }
       />
 

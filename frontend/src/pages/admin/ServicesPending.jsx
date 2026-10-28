@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getPendingServices,
   approveService,
+  rejectService,
 } from "../../api/admin";
 import Layout from "../../components/Layout";
 

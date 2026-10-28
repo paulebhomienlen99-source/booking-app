@@ -35,18 +35,30 @@ export function uploadDocument(file) {
 export function createListing(
   title,
   description,
-  price
+  price,
+  image
 ) {
+  const formData = new FormData();
+
+  formData.append("title", title);
+  formData.append("description", description);
+  formData.append("price", price);
+
+  if (image) {
+    formData.append("image", image);
+  }
+
   return API.post(
     "/create-listing",
+    formData,
     {
-      title,
-      description,
-      price,
+      headers: {
+        "Content-Type":
+          "multipart/form-data",
+      },
     }
   );
 }
-
 export function createSlot(
   service_id,
   date,

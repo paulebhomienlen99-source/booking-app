@@ -54,6 +54,7 @@ SERVICES
 router.post(
   "/create-listing",
   auth,
+  upload.single("image"),
   createListing
 );
 
