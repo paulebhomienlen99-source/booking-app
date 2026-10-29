@@ -1,7 +1,8 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/api";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api/customers",
+  baseURL: `${API_BASE_URL}/customers`,
 });
 
 export function getAllServices() {
@@ -13,7 +14,7 @@ export function getMyBookings() {
     localStorage.getItem("token");
 
   return axios.get(
-    "http://localhost:5000/api/reservations/my",
+    `${API_BASE_URL}/reservations/my`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -24,7 +25,7 @@ export function getMyBookings() {
 
 export function getServiceSlots(serviceId) {
   return axios.get(
-    `http://localhost:5000/api/slots/service/${serviceId}`
+    `${API_BASE_URL}/slots/service/${serviceId}`
   );
 }
 
@@ -34,7 +35,7 @@ export function reserveSlot(
   slot_id
 ) {
   return axios.post(
-    "http://localhost:5000/api/reservations/create",
+    `${API_BASE_URL}/reservations/create`,
     {
       customer_id,
       listing_id,
@@ -43,12 +44,13 @@ export function reserveSlot(
     }
   );
 }
+
 export function cancelBooking(id) {
   const token =
     localStorage.getItem("token");
 
   return axios.post(
-    `http://localhost:5000/api/reservations/cancel/${id}`,
+    `${API_BASE_URL}/reservations/cancel/${id}`,
     {},
     {
       headers: {
