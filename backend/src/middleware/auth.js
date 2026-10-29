@@ -4,8 +4,6 @@ import { JWT_SECRET } from "../config/env.js";
 export function auth(req, res, next) {
   const header = req.headers.authorization;
 
-  console.log("AUTHORIZATION:", header);
-
   if (!header || !header.startsWith("Bearer ")) {
     console.error("AUTH ERROR: Missing token");
 
@@ -22,11 +20,6 @@ export function auth(req, res, next) {
       JWT_SECRET
     );
 
-    console.log(
-      "JWT PAYLOAD:",
-      payload
-    );
-
     req.user = payload;
 
     next();
@@ -41,3 +34,4 @@ export function auth(req, res, next) {
     });
   }
 }
+

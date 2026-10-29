@@ -55,18 +55,6 @@ const passwordMatch = await bcrypt.compare(
   password,
   admin.password_hash
 );
-
-console.log(
-  "PASSWORD MATCH:",
-  passwordMatch
-);
-
-console.log("PASSWORD MATCH:", passwordMatch);
-
-console.log(
-  "PASSWORD MATCH:",
-  passwordMatch
-);
     if (!passwordMatch) {
       return res.status(401).json({
         success: false,
