@@ -133,9 +133,9 @@ export async function createOrder(
   intent: "CAPTURE",
  application_context: {
   return_url:
-    "http://localhost:5173/payment-success",
+    "https://booking-app-sigma-two.vercel.app/payment-success",
   cancel_url:
-    "http://localhost:5173/payment-cancel",
+    "https://booking-app-sigma-two.vercel.app/payment-cancel",
 },
   purchase_units: [
               {
