@@ -1,8 +1,18 @@
+// backend/src/modules/auth/auth.repository.js
+
 import { pool } from "../../config/db.js";
 
 export async function findUserByEmail(email) {
   const { rows } = await pool.query(
-    "SELECT id, email, password, role FROM users WHERE email = $1",
+    `
+    SELECT
+      id,
+      email,
+      password,
+      role
+    FROM users
+    WHERE email = $1
+    `,
     [email]
   );
 
@@ -22,7 +32,10 @@ export async function createUser({
       role
     )
     VALUES ($1, $2, $3)
-    RETURNING id, email, role
+    RETURNING
+      id,
+      email,
+      role
     `,
     [
       email,
@@ -32,4 +45,41 @@ export async function createUser({
   );
 
   return rows[0];
+}
+
+export async function saveResetToken(
+  email,
+  token,
+  expires
+) {
+  await pool.query(
+    `
+    UPDATE users
+    SET
+      reset_token = $1,
+      reset_token_expires = $2
+    WHERE email = $3
+    `,
+    [
+      token,
+      expires,
+      email,
+    ]
+  );
+}
+
+export async function findUserByResetToken(
+  token
+) {
+  const { rows } = await pool.query(
+    `
+    SELECT *
+    FROM users
+    WHERE reset_token = $1
+      AND reset_token_expires > NOW()
+    `,
+    [token]
+  );
+
+  return rows[0] || null;
 }

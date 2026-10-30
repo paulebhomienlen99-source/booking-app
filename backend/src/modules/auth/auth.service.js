@@ -1,14 +1,18 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 import {
   JWT_SECRET,
   JWT_EXPIRES_IN,
 } from "../../config/env.js";
 
+import { sendMail } from "../../config/email.js";
+
 import {
   findUserByEmail,
   createUser,
+  saveResetToken,
 } from "./auth.repository.js";
 
 const SALT_ROUNDS = 12;
@@ -86,5 +90,63 @@ export async function login({
       email: user.email,
       role: user.role,
     },
+  };
+}
+
+export async function forgotPassword(
+  email
+) {
+  const user =
+    await findUserByEmail(email);
+
+  if (!user) {
+    return {
+      success: true,
+    };
+  }
+
+  const token =
+    crypto.randomBytes(32)
+      .toString("hex");
+
+  const expires = new Date(
+    Date.now() +
+      1000 * 60 * 60
+  );
+
+  await saveResetToken(
+    email,
+    token,
+    expires
+  );
+
+  const resetUrl =
+  `https://booking-app-sigma-two.vercel.app/reset-password?token=${token}`;
+
+await sendMail({
+  to: email,
+  subject:
+    "Reset Password - BookHub",
+  html: `
+    <h2>Reset Password</h2>
+
+    <p>
+      Hai richiesto il reset della password.
+    </p>
+
+    <p>
+      <a href="${resetUrl}">
+        Clicca qui per reimpostare la password
+      </a>
+    </p>
+
+    <p>
+      Il link scade fra 1 ora.
+    </p>
+  `,
+});
+
+  return {
+    success: true,
   };
 }
