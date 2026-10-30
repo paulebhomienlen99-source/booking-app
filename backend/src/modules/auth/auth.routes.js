@@ -4,6 +4,7 @@ import {
   registerHandler,
   loginHandler,
   forgotPasswordHandler,
+  resetPasswordHandler,
   meHandler,
 } from "./auth.controller.js";
 
@@ -24,6 +25,11 @@ router.post(
 router.post(
   "/forgot-password",
   forgotPasswordHandler
+);
+
+router.post(
+  "/reset-password",
+  resetPasswordHandler
 );
 
 router.get(

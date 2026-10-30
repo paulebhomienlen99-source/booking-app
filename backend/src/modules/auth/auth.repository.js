@@ -83,3 +83,35 @@ export async function findUserByResetToken(
 
   return rows[0] || null;
 }
+
+export async function updatePassword(
+  userId,
+  passwordHash
+) {
+  await pool.query(
+    `
+    UPDATE users
+    SET password = $1
+    WHERE id = $2
+    `,
+    [
+      passwordHash,
+      userId,
+    ]
+  );
+}
+
+export async function clearResetToken(
+  userId
+) {
+  await pool.query(
+    `
+    UPDATE users
+    SET
+      reset_token = NULL,
+      reset_token_expires = NULL
+    WHERE id = $1
+    `,
+    [userId]
+  );
+}

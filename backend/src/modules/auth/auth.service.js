@@ -13,6 +13,9 @@ import {
   findUserByEmail,
   createUser,
   saveResetToken,
+  findUserByResetToken,
+  updatePassword,
+  clearResetToken,
 } from "./auth.repository.js";
 
 const SALT_ROUNDS = 12;
@@ -30,11 +33,10 @@ export async function register({
     throw new Error("EMAIL_EXISTS");
   }
 
-  const passwordHash =
-    await bcrypt.hash(
-      password,
-      SALT_ROUNDS
-    );
+  const passwordHash = await bcrypt.hash(
+    password,
+    SALT_ROUNDS
+  );
 
   const user = await createUser({
     email,
@@ -58,11 +60,10 @@ export async function login({
     );
   }
 
-  const ok =
-    await bcrypt.compare(
-      password,
-      user.password
-    );
+  const ok = await bcrypt.compare(
+    password,
+    user.password
+  );
 
   if (!ok) {
     throw new Error(
@@ -121,30 +122,65 @@ export async function forgotPassword(
   );
 
   const resetUrl =
-  `https://booking-app-sigma-two.vercel.app/reset-password?token=${token}`;
+    `https://booking-app-sigma-two.vercel.app/reset-password?token=${token}`;
 
-await sendMail({
-  to: email,
-  subject:
-    "Reset Password - BookHub",
-  html: `
-    <h2>Reset Password</h2>
+  await sendMail({
+    to: email,
+    subject:
+      "Reset Password - BookHub",
+    html: `
+      <h2>Reset Password</h2>
 
-    <p>
-      Hai richiesto il reset della password.
-    </p>
+      <p>
+        Hai richiesto il reset della password.
+      </p>
 
-    <p>
-      <a href="${resetUrl}">
-        Clicca qui per reimpostare la password
-      </a>
-    </p>
+      <p>
+        <a href="${resetUrl}">
+          Clicca qui per reimpostare la password
+        </a>
+      </p>
 
-    <p>
-      Il link scade fra 1 ora.
-    </p>
-  `,
-});
+      <p>
+        Il link scade fra 1 ora.
+      </p>
+    `,
+  });
+
+  return {
+    success: true,
+  };
+}
+
+export async function resetPassword(
+  token,
+  newPassword
+) {
+  const user =
+    await findUserByResetToken(
+      token
+    );
+
+  if (!user) {
+    throw new Error(
+      "INVALID_RESET_TOKEN"
+    );
+  }
+
+  const passwordHash =
+    await bcrypt.hash(
+      newPassword,
+      SALT_ROUNDS
+    );
+
+  await updatePassword(
+    user.id,
+    passwordHash
+  );
+
+  await clearResetToken(
+    user.id
+  );
 
   return {
     success: true,

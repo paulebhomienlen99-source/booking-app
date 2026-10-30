@@ -2,6 +2,7 @@ import {
   register,
   login,
   forgotPassword,
+  resetPassword,
 } from "./auth.service.js";
 
 export async function registerHandler(req, res) {
@@ -80,7 +81,48 @@ export async function forgotPasswordHandler(
   }
 }
 
-export async function meHandler(req, res) {
+export async function resetPasswordHandler(
+  req,
+  res
+) {
+  try {
+    const {
+      token,
+      password,
+    } = req.body;
+
+    await resetPassword(
+      token,
+      password
+    );
+
+    res.json({
+      success: true,
+      message:
+        "Password aggiornata con successo.",
+    });
+  } catch (err) {
+    if (
+      err.message ===
+      "INVALID_RESET_TOKEN"
+    ) {
+      return res.status(400).json({
+        error:
+          "Token non valido o scaduto.",
+      });
+    }
+
+    res.status(500).json({
+      error: "Internal error",
+      details: err.message,
+    });
+  }
+}
+
+export async function meHandler(
+  req,
+  res
+) {
   res.json({
     user: req.user,
   });
