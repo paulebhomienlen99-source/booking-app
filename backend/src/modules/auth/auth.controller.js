@@ -93,6 +93,9 @@ export async function resetPasswordHandler(
   res
 ) {
   try {
+    console.log("RESET PASSWORD CHIAMATO");
+    console.log("BODY:", req.body);
+
     const {
       token,
       password,
@@ -109,15 +112,10 @@ export async function resetPasswordHandler(
         "Password aggiornata con successo.",
     });
   } catch (err) {
-    if (
-      err.message ===
-      "INVALID_RESET_TOKEN"
-    ) {
-      return res.status(400).json({
-        error:
-          "Token non valido o scaduto.",
-      });
-    }
+    console.error(
+      "RESET PASSWORD ERROR:",
+      err
+    );
 
     res.status(500).json({
       error: "Internal error",

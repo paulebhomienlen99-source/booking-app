@@ -53,15 +53,15 @@ export default function ResetPassword() {
           }
         );
 
-      const data =
-        await response.json();
+      const text =
+  await response.text();
+
+console.log("RISPOSTA:", text);
+
 
       if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "Errore durante il reset."
-        );
-      }
+  throw new Error(text);
+}
 
       setMessage(
         "Password aggiornata con successo."
