@@ -53,14 +53,13 @@ export default function ResetPassword() {
           }
         );
 
-      const text =
-  await response.text();
+      const data =
+  await response.json();
 
-console.log("RISPOSTA:", text);
-
-
-      if (!response.ok) {
-  throw new Error(text);
+if (!response.ok) {
+  throw new Error(
+    data.error || "Errore durante il reset."
+  );
 }
 
       setMessage(

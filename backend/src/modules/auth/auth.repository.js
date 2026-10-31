@@ -3,7 +3,6 @@
 import { pool } from "../../config/db.js";
 
 export async function findUserByEmail(email) {
-  console.log("CERCO NEL DB:", email);
 
   const { rows } = await pool.query(
     `
@@ -17,9 +16,6 @@ export async function findUserByEmail(email) {
     `,
     [email]
   );
-
-  console.log("RIGHE TROVATE:", rows);
-
   return rows[0] || null;
 }
 export async function createUser({

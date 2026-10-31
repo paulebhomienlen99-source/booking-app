@@ -64,8 +64,6 @@ export async function forgotPasswordHandler(
   res
 ) {
   try {
-    console.log("FORGOT PASSWORD CHIAMATO");
-    console.log("BODY:", req.body);
 
     const { email } = req.body;
 
@@ -93,9 +91,6 @@ export async function resetPasswordHandler(
   res
 ) {
   try {
-    console.log("RESET PASSWORD CHIAMATO");
-    console.log("BODY:", req.body);
-
     const {
       token,
       password,
