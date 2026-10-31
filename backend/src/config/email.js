@@ -19,10 +19,29 @@ export async function sendMail({
   subject,
   html,
 }) {
-  return transporter.sendMail({
-    from: process.env.EMAIL_FROM,
-    to,
-    subject,
-    html,
-  });
+  try {
+    console.log("INVIO EMAIL A:", to);
+
+    const info =
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to,
+        subject,
+        html,
+      });
+
+    console.log(
+      "EMAIL INVIATA ✅",
+      info.messageId
+    );
+
+    return info;
+  } catch (error) {
+    console.error(
+      "ERRORE SMTP ❌",
+      error
+    );
+
+    throw error;
+  }
 }

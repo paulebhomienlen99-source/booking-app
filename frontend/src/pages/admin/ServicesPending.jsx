@@ -32,7 +32,15 @@ export default function ServicesPending() {
       console.error(error);
     }
   };
+const handleReject = async (id) => {
+  try {
+    await rejectService(id);
 
+    loadServices();
+  } catch (error) {
+    console.error(error);
+  }
+};
   return (
     <Layout>
       <h2 className="text-xl font-bold mb-4">
@@ -61,14 +69,25 @@ export default function ServicesPending() {
               Stato: {service.status}
             </p>
 
-            <button
-              className="mt-3 bg-green-600 text-white px-4 py-2 rounded"
-              onClick={() =>
-                handleApprove(service.id)
-              }
-            >
-              Approva
-            </button>
+           <div className="flex gap-3 mt-3">
+  <button
+    className="bg-green-600 text-white px-4 py-2 rounded"
+    onClick={() =>
+      handleApprove(service.id)
+    }
+  >
+    ✅ Approva
+  </button>
+
+  <button
+    className="bg-red-600 text-white px-4 py-2 rounded"
+    onClick={() =>
+      handleReject(service.id)
+    }
+  >
+    ❌ Rifiuta
+  </button>
+</div>
           </div>
         ))
       )}

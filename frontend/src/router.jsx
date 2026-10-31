@@ -26,7 +26,8 @@ import PaymentSuccess from "./pages/customer/PaymentSuccess";
 // AUTH
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
-
+import ResetPassword from "./pages/auth/ResetPassword";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 function ProtectedRoute({
   children,
   role,
@@ -63,6 +64,14 @@ export default function App() {
           path="/register"
           element={<Register />}
         />
+<Route
+  path="/forgot-password"
+  element={<ForgotPassword />}
+/>
+<Route
+  path="/reset-password"
+  element={<ResetPassword />}
+/>
 <Route
   path="/admin/login"
   element={<AdminLogin />}

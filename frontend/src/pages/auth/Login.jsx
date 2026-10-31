@@ -13,34 +13,38 @@ export default function Login() {
     e.preventDefault();
 
     try {
-      const res = await login(email, password);
-
-      console.log("LOGIN RESPONSE:", res.data);
+      const res = await login(
+        email,
+        password
+      );
 
       if (res.data.token) {
         setError("");
 
         const role =
-          res.data.user?.role || "customer";
+          res.data.user?.role ||
+          "customer";
 
         localStorage.setItem(
-  "token",
-  res.data.token
-);
+          "token",
+          res.data.token
+        );
 
-localStorage.setItem(
-  "role",
-  role
-);
+        localStorage.setItem(
+          "role",
+          role
+        );
 
-localStorage.setItem(
-  "userId",
-  res.data.user.id
-);
+        localStorage.setItem(
+          "userId",
+          res.data.user.id
+        );
 
         if (role === "admin") {
           navigate("/admin");
-        } else if (role === "provider") {
+        } else if (
+          role === "provider"
+        ) {
           navigate("/provider");
         } else {
           navigate("/customer");
@@ -51,7 +55,7 @@ localStorage.setItem(
     } catch (err) {
       setError(
         err.response?.data?.error ||
-        "Login failed"
+          "Login failed"
       );
     }
   };
@@ -80,6 +84,7 @@ localStorage.setItem(
           onChange={(e) =>
             setEmail(e.target.value)
           }
+          required
         />
 
         <input
@@ -88,8 +93,11 @@ localStorage.setItem(
           className="w-full border p-2 mb-4 rounded"
           value={password}
           onChange={(e) =>
-            setPassword(e.target.value)
+            setPassword(
+              e.target.value
+            )
           }
+          required
         />
 
         <button
@@ -98,6 +106,15 @@ localStorage.setItem(
         >
           Login
         </button>
+
+        <div className="mt-4 text-center">
+          <a
+            href="/forgot-password"
+            className="text-blue-600 hover:underline"
+          >
+            Password dimenticata?
+          </a>
+        </div>
       </form>
     </div>
   );

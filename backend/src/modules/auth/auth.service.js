@@ -93,10 +93,7 @@ export async function login({
     },
   };
 }
-
-export async function forgotPassword(
-  email
-) {
+export async function forgotPassword(email) {
   const user =
     await findUserByEmail(email);
 
@@ -111,8 +108,7 @@ export async function forgotPassword(
       .toString("hex");
 
   const expires = new Date(
-    Date.now() +
-      1000 * 60 * 60
+    Date.now() + 1000 * 60 * 60
   );
 
   await saveResetToken(
@@ -126,8 +122,7 @@ export async function forgotPassword(
 
   await sendMail({
     to: email,
-    subject:
-      "Reset Password - BookHub",
+    subject: "Reset Password - BookHub",
     html: `
       <h2>Reset Password</h2>
 
@@ -151,7 +146,6 @@ export async function forgotPassword(
     success: true,
   };
 }
-
 export async function resetPassword(
   token,
   newPassword

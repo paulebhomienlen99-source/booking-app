@@ -64,6 +64,9 @@ export async function forgotPasswordHandler(
   res
 ) {
   try {
+    console.log("FORGOT PASSWORD CHIAMATO");
+    console.log("BODY:", req.body);
+
     const { email } = req.body;
 
     await forgotPassword(email);
@@ -74,6 +77,10 @@ export async function forgotPasswordHandler(
         "Se l'email esiste, riceverai un link per il reset della password.",
     });
   } catch (err) {
+   console.error(
+  "FORGOT PASSWORD ERROR:",
+  err
+);
     res.status(500).json({
       error: "Internal error",
       details: err.message,
