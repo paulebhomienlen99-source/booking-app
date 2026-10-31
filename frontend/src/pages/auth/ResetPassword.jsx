@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-
+import { API_BASE_URL } from "../../config/api";
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ export default function ResetPassword() {
     try {
       const response =
         await fetch(
-          `${import.meta.env.VITE_API_URL}/api/auth/reset-password`,
+         `${API_BASE_URL}/auth/reset-password`,
           {
             method: "POST",
             headers: {
