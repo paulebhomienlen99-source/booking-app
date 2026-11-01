@@ -103,8 +103,9 @@ async function handleView(id) {
     console.error(error);
 
     alert(
-      "Impossibile eliminare questo utente"
-    );
+  error?.response?.data?.error ||
+  "Impossibile eliminare questo utente"
+);
   }
 }
 const filteredUsers = users.filter(

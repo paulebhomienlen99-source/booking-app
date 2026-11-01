@@ -765,12 +765,20 @@ router.delete("/users/:id", async (req, res) => {
       message: "User deleted",
     });
   } catch (error) {
-    console.error(error);
+  console.error(error);
 
-    res.status(500).json({
+  if (error.code === "23503") {
+    return res.status(400).json({
       success: false,
-      error: "Internal server error",
+      error:
+        "Non puoi eliminare un utente che ha prenotazioni associate",
     });
   }
+
+  res.status(500).json({
+    success: false,
+    error: "Internal server error",
+  });
+}
 });
 export default router;
