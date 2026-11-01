@@ -346,21 +346,21 @@ const filteredUsers = users.filter(
                     </button>
 
                     <button
-                      style={{
-                        backgroundColor: "#dc2626",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "6px",
-                        padding: "6px 10px",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
-                      onClick={() =>
-                        handleDelete(u.id)
-                      }
-                    >
-                      Delete
-                    </button>
+  style={{
+    backgroundColor: "#dc2626",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    padding: "6px 10px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  }}
+  onClick={() =>
+    handleDelete(u.id)
+  }
+>
+  Delete
+</button>
                   </div>
                 </td>
               </tr>
