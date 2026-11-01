@@ -478,13 +478,31 @@ router.get("/reservations", async (req, res) => {
         r.id,
         r.status,
         r.created_at,
+
         u.email AS customer_name,
-        s.title AS service_name
+
+        p.name AS provider_name,
+
+        s.title AS service_name,
+        s.price,
+
+        CASE
+          WHEN r.status = 'confirmed'
+          THEN 'paid'
+          ELSE 'refunded'
+        END AS payment_status
+
       FROM reservations r
+
       JOIN users u
         ON u.id = r.customer_id
+
+      JOIN providers p
+        ON p.id = r.provider_id
+
       JOIN services s
         ON s.id = r.listing_id
+
       ORDER BY r.created_at DESC
     `);
 

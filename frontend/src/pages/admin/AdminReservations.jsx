@@ -43,24 +43,30 @@ export default function AdminReservations() {
 
   function exportCSV() {
     const headers = [
-      "ID",
-      "Cliente",
-      "Servizio",
-      "Stato",
-      "Data",
-    ];
+  "ID",
+  "Cliente",
+  "Provider",
+  "Servizio",
+  "Prezzo",
+  "Stato",
+  "Payment Status",
+  "Data",
+];
 
-    const rows = filteredReservations.map(
-      (r) => [
-        r.id,
-        r.customer_name,
-        r.service_name,
-        r.status,
-        new Date(
-          r.created_at
-        ).toLocaleString("it-IT"),
-      ]
-    );
+const rows = filteredReservations.map(
+  (r) => [
+    r.id,
+    r.customer_name,
+    r.provider_name,
+    r.service_name,
+    r.price,
+    r.status,
+    r.payment_status,
+    new Date(
+      r.created_at
+    ).toLocaleString("it-IT"),
+  ]
+);
 
     const csvContent = [
       headers.join(","),
