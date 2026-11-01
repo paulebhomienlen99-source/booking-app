@@ -529,11 +529,12 @@ router.get("/users", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
-        id,
-        email,
-        role
-      FROM users
-      ORDER BY id DESC
+  id,
+  email,
+  role,
+  is_active
+FROM users
+ORDER BY id DESC
     `);
 
     res.json({
