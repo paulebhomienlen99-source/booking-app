@@ -603,4 +603,71 @@ router.patch("/users/:id/role", async (req, res) => {
     });
   }
 });
+/*
+=====================================
+SUSPEND USER
+=====================================
+*/
+
+router.patch("/users/:id/suspend", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET is_active = false
+      WHERE id = $1
+      RETURNING id, email, role, is_active
+      `,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
+/*
+=====================================
+REACTIVATE USER
+=====================================
+*/
+
+router.patch("/users/:id/reactivate", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET is_active = true
+      WHERE id = $1
+      RETURNING id, email, role, is_active
+      `,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
 export default router;
