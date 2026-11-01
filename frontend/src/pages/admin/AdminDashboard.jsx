@@ -337,6 +337,18 @@ function exportAnalyticsCSV() {
           >
             Services Pending
 </Link>
+<Link
+  to="/admin/reviews"
+  style={{
+    padding: "10px 18px",
+    background: "#f59e0b",
+    color: "#fff",
+    textDecoration: "none",
+    borderRadius: "6px",
+  }}
+>
+  Reviews
+</Link>
 </div>
 </div>
 <div
