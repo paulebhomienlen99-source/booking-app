@@ -401,7 +401,19 @@ const topProviders =
     ORDER BY bookings DESC
     LIMIT 5
   `);
-      const monthlyRevenue =
+     const topCustomers =
+  await pool.query(`
+    SELECT
+      u.email,
+      COUNT(r.id) AS bookings
+    FROM users u
+    LEFT JOIN reservations r
+      ON r.customer_id = u.id
+    GROUP BY u.id, u.email
+    ORDER BY bookings DESC
+    LIMIT 5
+  `); 
+  const monthlyRevenue =
   await pool.query(
     `
     SELECT
@@ -441,7 +453,9 @@ const topProviders =
         ),
 topProviders:
   topProviders.rows,
-        approvedProviders:
+      topCustomers:
+  topCustomers.rows,  
+  approvedProviders:
           Number(
             approvedProviders
               .rows[0].count

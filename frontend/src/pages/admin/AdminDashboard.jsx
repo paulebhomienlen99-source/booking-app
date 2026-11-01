@@ -339,6 +339,60 @@ if (loading) {
     border: "1px solid #ddd",
   }}
 >
+  <h2>🏆 Top Providers</h2>
+
+<table>
+ ...
+</table>
+</div>
+
+<div
+  style={{
+    marginTop: "40px",
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+  }}
+>
+  <h2>👥 Top Customers</h2>
+
+  <table
+    style={{
+      width: "100%",
+      marginTop: "15px",
+      borderCollapse: "collapse",
+    }}
+  >
+    <thead>
+      <tr>
+        <th>Cliente</th>
+        <th>Prenotazioni</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {stats?.topCustomers?.map(
+        (customer, index) => (
+          <tr key={index}>
+            <td>{customer.email}</td>
+            <td>{customer.bookings}</td>
+          </tr>
+        )
+      )}
+    </tbody>
+  </table>
+</div>
+
+<div
+  style={{
+    marginTop: "40px",
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+  }}
+>
   <h2>Prenotazioni Recenti</h2>
 
   <table
