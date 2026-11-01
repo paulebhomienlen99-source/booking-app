@@ -455,8 +455,47 @@ if (loading) {
     border: "1px solid #ddd",
   }}
 >
-  <h2>Prenotazioni Recenti</h2>
+  <h2>⭐ Top Rated Providers</h2>
 
+  <table
+    style={{
+      width: "100%",
+      marginTop: "15px",
+      borderCollapse: "collapse",
+    }}
+  >
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Rating</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {stats?.topRatedProviders?.map(
+        (provider, index) => (
+          <tr key={index}>
+            <td>{provider.name}</td>
+            <td>
+              ⭐ {provider.rating}
+            </td>
+          </tr>
+        )
+      )}
+    </tbody>
+  </table>
+</div>
+
+<div
+  style={{
+    marginTop: "40px",
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+  }}
+>
+  <h2>Prenotazioni Recenti</h2>
   <table
     style={{
       width: "100%",

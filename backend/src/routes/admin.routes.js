@@ -443,6 +443,24 @@ const topProviders =
     ORDER BY revenue DESC
     LIMIT 5
   `); 
+  const topRatedProviders =
+  await pool.query(`
+    SELECT
+      p.name,
+      ROUND(
+        COALESCE(
+          AVG(r.rating),
+          0
+        )::numeric,
+        1
+      ) AS rating
+    FROM providers p
+    LEFT JOIN reviews r
+      ON r.provider_id = p.id
+    GROUP BY p.id, p.name
+    ORDER BY rating DESC
+    LIMIT 5
+  `);
   const monthlyRevenue =
   await pool.query(
     `
@@ -489,6 +507,8 @@ topProviders:
   topServices.rows,
   revenuePerProvider:
   revenuePerProvider.rows,
+  topRatedProviders:
+  topRatedProviders.rows,
   approvedProviders:
           Number(
             approvedProviders
