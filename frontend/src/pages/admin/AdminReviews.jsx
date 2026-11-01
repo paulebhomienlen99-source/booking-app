@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { getReviews } from "../../api/admin";
-
+import {
+  getReviews,
+  deleteReview,
+} from "../../api/admin";
 export default function AdminReviews() {
   const [reviews, setReviews] = useState([]);
 
@@ -19,7 +21,21 @@ export default function AdminReviews() {
       console.error(error);
     }
   }
+async function handleDelete(id) {
+  const confirmed = window.confirm(
+    "Eliminare questa recensione?"
+  );
 
+  if (!confirmed) return;
+
+  try {
+    await deleteReview(id);
+
+    await loadReviews();
+  } catch (error) {
+    console.error(error);
+  }
+}
   return (
     <div style={{ padding: "20px" }}>
       <h1>⭐ Gestione Recensioni</h1>
@@ -30,47 +46,66 @@ export default function AdminReviews() {
       </p>
 
       <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          marginTop: "20px",
-        }}
-      >
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Cliente</th>
-            <th>Provider</th>
-            <th>Rating</th>
-            <th>Commento</th>
-            <th>Data</th>
-          </tr>
-        </thead>
+  style={{
+    width: "100%",
+    borderCollapse: "collapse",
+    marginTop: "20px",
+  }}
+>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Cliente</th>
+      <th>Provider</th>
+      <th>Rating</th>
+      <th>Commento</th>
+      <th>Data</th>
+      <th>Azioni</th>
+    </tr>
+  </thead>
 
-        <tbody>
-          {reviews.map((review) => (
-            <tr key={review.id}>
-              <td>{review.id}</td>
+  <tbody>
+    {reviews.map((review) => (
+      <tr key={review.id}>
+        <td>{review.id}</td>
 
-              <td>{review.customer_id}</td>
+        <td>{review.customer_id}</td>
 
-              <td>{review.provider_id}</td>
+        <td>{review.provider_id}</td>
 
-              <td>
-                ⭐ {review.rating}
-              </td>
+        <td>
+          ⭐ {review.rating}
+        </td>
 
-              <td>{review.comment}</td>
+        <td>{review.comment}</td>
 
-              <td>
-                {new Date(
-                  review.created_at
-                ).toLocaleDateString()}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <td>
+          {new Date(
+            review.created_at
+          ).toLocaleDateString()}
+        </td>
+
+        <td>
+          <button
+            style={{
+              backgroundColor: "#dc2626",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              padding: "6px 10px",
+              cursor: "pointer",
+            }}
+            onClick={() =>
+              handleDelete(review.id)
+            }
+          >
+            Delete
+          </button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
     </div>
   );
 }

@@ -162,3 +162,10 @@ export async function getReviews() {
 
   return response.data;
 }
+export async function deleteReview(id) {
+  const response = await API.delete(
+    `/reviews/${id}`
+  );
+
+  return response.data;
+}

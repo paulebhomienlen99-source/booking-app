@@ -897,5 +897,43 @@ router.get("/reviews", async (req, res) => {
     });
   }
 });
+/*
+=====================================
+DELETE REVIEW
+=====================================
+*/
 
+router.delete("/reviews/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      DELETE FROM reviews
+      WHERE id = $1
+      RETURNING *
+      `,
+      [id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        success: false,
+        error: "Review not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Review deleted",
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
 export default router;
