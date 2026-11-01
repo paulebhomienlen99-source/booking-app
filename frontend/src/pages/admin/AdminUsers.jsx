@@ -292,11 +292,14 @@ const filteredUsers = users.filter(
 
                 <td>
                   <div
-                    style={{
-                      display: "flex",
-                      gap: "10px",
-                    }}
-                  >
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+  }}
+>
+
                     <select
                       value={u.role}
                       onChange={(e) =>
