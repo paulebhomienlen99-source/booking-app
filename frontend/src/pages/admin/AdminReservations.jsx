@@ -88,8 +88,12 @@ const rows = filteredReservations.map(
     link.href =
       URL.createObjectURL(blob);
 
-    link.download =
-      `reservations-${Date.now()}.csv`;
+    const today = new Date()
+  .toISOString()
+  .split("T")[0];
+
+link.download =
+  `bookhub-reservations-${today}.csv`;
 
     link.click();
   }
