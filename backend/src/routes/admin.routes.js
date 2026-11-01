@@ -552,6 +552,52 @@ ORDER BY id DESC
 });
 /*
 =====================================
+USER DETAILS
+=====================================
+*/
+
+router.get("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        name,
+        email,
+        role,
+        is_active,
+        reset_token,
+        reset_token_expires
+      FROM users
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+/*
+=====================================
 CHANGE USER ROLE
 =====================================
 */
