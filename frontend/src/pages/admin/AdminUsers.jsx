@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import {
   getUsers,
   changeUserRole,
+  suspendUser,
+  reactivateUser,
 } from "../../api/admin";
 
 export default function AdminUsers() {
@@ -42,6 +44,24 @@ export default function AdminUsers() {
     }
   }
 
+  async function handleSuspend(id) {
+    try {
+      await suspendUser(id);
+      await loadUsers();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function handleReactivate(id) {
+    try {
+      await reactivateUser(id);
+      await loadUsers();
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   const filteredUsers = users.filter(
     (u) => {
       const matchesSearch =
@@ -66,6 +86,7 @@ export default function AdminUsers() {
       "ID",
       "Email",
       "Role",
+      "Status",
     ];
 
     const rows = filteredUsers.map(
@@ -73,6 +94,9 @@ export default function AdminUsers() {
         u.id,
         u.email,
         u.role,
+        u.is_active
+          ? "Active"
+          : "Suspended",
       ]
     );
 
@@ -199,6 +223,7 @@ export default function AdminUsers() {
             <th>ID</th>
             <th>Email</th>
             <th>Role</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -214,27 +239,62 @@ export default function AdminUsers() {
                 <td>{u.role}</td>
 
                 <td>
-                  <select
-                    value={u.role}
-                    onChange={(e) =>
-                      handleRoleChange(
-                        u.id,
-                        e.target.value
-                      )
-                    }
+                  {u.is_active
+                    ? "✅ Active"
+                    : "⛔ Suspended"}
+                </td>
+
+                <td>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                    }}
                   >
-                    <option value="customer">
-                      Customer
-                    </option>
+                    <select
+                      value={u.role}
+                      onChange={(e) =>
+                        handleRoleChange(
+                          u.id,
+                          e.target.value
+                        )
+                      }
+                    >
+                      <option value="customer">
+                        Customer
+                      </option>
 
-                    <option value="provider">
-                      Provider
-                    </option>
+                      <option value="provider">
+                        Provider
+                      </option>
 
-                    <option value="admin">
-                      Admin
-                    </option>
-                  </select>
+                      <option value="admin">
+                        Admin
+                      </option>
+                    </select>
+
+                    {u.is_active ? (
+                      <button
+                        onClick={() =>
+                          handleSuspend(
+                            u.id
+                          )
+                        }
+                      >
+                        Suspend
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          handleReactivate(
+                            u.id
+                          )
+                        }
+                      >
+                        Reactivate
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             )

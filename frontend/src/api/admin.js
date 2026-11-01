@@ -121,3 +121,18 @@ export async function changeUserRole(
 
   return response.data;
 }
+export async function suspendUser(id) {
+  const response = await API.patch(
+    `/users/${id}/suspend`
+  );
+
+  return response.data;
+}
+
+export async function reactivateUser(id) {
+  const response = await API.patch(
+    `/users/${id}/reactivate`
+  );
+
+  return response.data;
+}
