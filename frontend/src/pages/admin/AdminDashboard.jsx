@@ -417,6 +417,44 @@ if (loading) {
     border: "1px solid #ddd",
   }}
 >
+  <h2>💰 Revenue Per Provider</h2>
+
+  <table
+    style={{
+      width: "100%",
+      marginTop: "15px",
+      borderCollapse: "collapse",
+    }}
+  >
+    <thead>
+      <tr>
+        <th>Provider</th>
+        <th>Revenue</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {stats?.revenuePerProvider?.map(
+        (provider, index) => (
+          <tr key={index}>
+            <td>{provider.name}</td>
+            <td>€ {provider.revenue}</td>
+          </tr>
+        )
+      )}
+    </tbody>
+  </table>
+</div>
+
+<div
+  style={{
+    marginTop: "40px",
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+  }}
+>
   <h2>Prenotazioni Recenti</h2>
 
   <table

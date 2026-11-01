@@ -425,7 +425,25 @@ const topProviders =
     ORDER BY bookings DESC
     LIMIT 5
   `);
-    const monthlyRevenue =
+   const revenuePerProvider =
+  await pool.query(`
+    SELECT
+      p.name,
+      COALESCE(
+        SUM(s.price),
+        0
+      ) AS revenue
+    FROM providers p
+    LEFT JOIN reservations r
+      ON r.provider_id = p.id
+      AND r.status = 'confirmed'
+    LEFT JOIN services s
+      ON s.id = r.listing_id
+    GROUP BY p.id, p.name
+    ORDER BY revenue DESC
+    LIMIT 5
+  `); 
+  const monthlyRevenue =
   await pool.query(
     `
     SELECT
@@ -469,6 +487,8 @@ topProviders:
   topCustomers.rows,  
   topServices:
   topServices.rows,
+  revenuePerProvider:
+  revenuePerProvider.rows,
   approvedProviders:
           Number(
             approvedProviders
