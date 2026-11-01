@@ -7,6 +7,8 @@ export default function AdminReviews() {
   const [reviews, setReviews] = useState([]);
 const [search, setSearch] =
   useState("");
+  const [ratingFilter, setRatingFilter] =
+  useState("all");
   useEffect(() => {
     loadReviews();
   }, []);
@@ -38,13 +40,25 @@ async function handleDelete(id) {
   }
 }
  const filteredReviews =
-  reviews.filter((review) =>
-    review.comment
-      ?.toLowerCase()
-      .includes(
-        search.toLowerCase()
-      )
-  ); 
+  reviews.filter((review) => {
+    const matchesSearch =
+      review.comment
+        ?.toLowerCase()
+        .includes(
+          search.toLowerCase()
+        );
+
+    const matchesRating =
+      ratingFilter === "all"
+        ? true
+        : Number(review.rating) ===
+          Number(ratingFilter);
+
+    return (
+      matchesSearch &&
+      matchesRating
+    );
+  });
 return (
     <div style={{ padding: "20px" }}>
       <h1>⭐ Gestione Recensioni</h1>
@@ -68,7 +82,42 @@ return (
     marginBottom: "20px",
   }}
 />
+<select
+  value={ratingFilter}
+  onChange={(e) =>
+    setRatingFilter(
+      e.target.value
+    )
+  }
+  style={{
+    padding: "10px",
+    marginLeft: "10px",
+  }}
+>
+  <option value="all">
+    Tutti i rating
+  </option>
 
+  <option value="5">
+    ⭐ 5
+  </option>
+
+  <option value="4">
+    ⭐ 4
+  </option>
+
+  <option value="3">
+    ⭐ 3
+  </option>
+
+  <option value="2">
+    ⭐ 2
+  </option>
+
+  <option value="1">
+    ⭐ 1
+  </option>
+</select>
       <table
   style={{
     width: "100%",
