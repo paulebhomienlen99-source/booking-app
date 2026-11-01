@@ -519,4 +519,34 @@ router.get("/reservations", async (req, res) => {
     });
   }
 });
+/*
+=================================================
+ADMIN USERS
+=================================================
+*/
+
+router.get("/users", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        email,
+        role
+      FROM users
+      ORDER BY id DESC
+    `);
+
+    res.json({
+      success: true,
+      users: result.rows,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
 export default router;
