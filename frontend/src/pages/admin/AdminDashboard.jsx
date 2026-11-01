@@ -302,47 +302,33 @@ if (loading) {
     border: "1px solid #ddd",
   }}
 >
+  
   <h2>🏆 Top Providers</h2>
 
-  <table
-    style={{
-      width: "100%",
-      marginTop: "15px",
-      borderCollapse: "collapse",
-    }}
-  >
-    <thead>
-      <tr>
-        <th>Provider</th>
-        <th>Prenotazioni</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      {stats?.topProviders?.map(
-        (provider, index) => (
-          <tr key={index}>
-            <td>{provider.name}</td>
-            <td>{provider.bookings}</td>
-          </tr>
-        )
-      )}
-    </tbody>
-  </table>
-</div>
-<div
+<table
   style={{
-    marginTop: "40px",
-    background: "#fff",
-    padding: "20px",
-    borderRadius: "8px",
-    border: "1px solid #ddd",
+    width: "100%",
+    marginTop: "15px",
+    borderCollapse: "collapse",
   }}
 >
-  <h2>🏆 Top Providers</h2>
+  <thead>
+    <tr>
+      <th>Provider</th>
+      <th>Prenotazioni</th>
+    </tr>
+  </thead>
 
-<table>
- ...
+  <tbody>
+    {stats?.topProviders?.map(
+      (provider, index) => (
+        <tr key={index}>
+          <td>{provider.name}</td>
+          <td>{provider.bookings}</td>
+        </tr>
+      )
+    )}
+  </tbody>
 </table>
 </div>
 
@@ -377,6 +363,44 @@ if (loading) {
           <tr key={index}>
             <td>{customer.email}</td>
             <td>{customer.bookings}</td>
+          </tr>
+        )
+      )}
+    </tbody>
+  </table>
+</div>
+
+<div
+  style={{
+    marginTop: "40px",
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+  }}
+>
+  <h2>⭐ Most Booked Services</h2>
+
+  <table
+    style={{
+      width: "100%",
+      marginTop: "15px",
+      borderCollapse: "collapse",
+    }}
+  >
+    <thead>
+      <tr>
+        <th>Servizio</th>
+        <th>Prenotazioni</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {stats?.topServices?.map(
+        (service, index) => (
+          <tr key={index}>
+            <td>{service.title}</td>
+            <td>{service.bookings}</td>
           </tr>
         )
       )}
