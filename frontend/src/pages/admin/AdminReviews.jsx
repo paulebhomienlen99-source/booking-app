@@ -5,7 +5,8 @@ import {
 } from "../../api/admin";
 export default function AdminReviews() {
   const [reviews, setReviews] = useState([]);
-
+const [search, setSearch] =
+  useState("");
   useEffect(() => {
     loadReviews();
   }, []);
@@ -36,14 +37,37 @@ async function handleDelete(id) {
     console.error(error);
   }
 }
-  return (
+ const filteredReviews =
+  reviews.filter((review) =>
+    review.comment
+      ?.toLowerCase()
+      .includes(
+        search.toLowerCase()
+      )
+  ); 
+return (
     <div style={{ padding: "20px" }}>
       <h1>⭐ Gestione Recensioni</h1>
 
-      <p>
-        Totale recensioni:{" "}
-        <strong>{reviews.length}</strong>
-      </p>
+<p>
+  Totale recensioni:{" "}
+  <strong>{reviews.length}</strong>
+</p>
+
+<input
+  type="text"
+  placeholder="Cerca commento..."
+  value={search}
+  onChange={(e) =>
+    setSearch(e.target.value)
+  }
+  style={{
+    padding: "10px",
+    width: "300px",
+    marginTop: "20px",
+    marginBottom: "20px",
+  }}
+/>
 
       <table
   style={{
@@ -65,7 +89,7 @@ async function handleDelete(id) {
   </thead>
 
   <tbody>
-    {reviews.map((review) => (
+    {filteredReviews.map((review) => (
       <tr key={review.id}>
         <td>{review.id}</td>
 
