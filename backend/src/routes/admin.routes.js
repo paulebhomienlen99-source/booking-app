@@ -389,7 +389,19 @@ router.get("/stats", async (req, res) => {
         WHERE approved = true
         `
       );
-const monthlyRevenue =
+const topProviders =
+  await pool.query(`
+    SELECT
+      p.name,
+      COUNT(r.id) AS bookings
+    FROM providers p
+    LEFT JOIN reservations r
+      ON r.provider_id = p.id
+    GROUP BY p.id, p.name
+    ORDER BY bookings DESC
+    LIMIT 5
+  `);
+      const monthlyRevenue =
   await pool.query(
     `
     SELECT
@@ -427,7 +439,8 @@ const monthlyRevenue =
         providers: Number(
           providers.rows[0].count
         ),
-
+topProviders:
+  topProviders.rows,
         approvedProviders:
           Number(
             approvedProviders
