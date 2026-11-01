@@ -11,6 +11,7 @@ import ProvidersPending from "./pages/admin/ProvidersPending";
 import ServicesPending from "./pages/admin/ServicesPending";
 import AdminReservations from "./pages/admin/AdminReservations";
 import AdminLogin from "./pages/admin/AdminLogin";
+import AdminUsers from "./pages/admin/AdminUsers";
 // PROVIDER
 import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderSetup from "./pages/provider/ProviderSetup";
@@ -108,6 +109,14 @@ export default function App() {
   element={
     <ProtectedRoute role="admin">
       <AdminReservations />
+    </ProtectedRoute>
+  }
+/>
+        <Route
+  path="/admin/users"
+  element={
+    <ProtectedRoute role="admin">
+      <AdminUsers />
     </ProtectedRoute>
   }
 />

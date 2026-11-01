@@ -33,6 +33,12 @@ export default function AdminSidebar() {
         >
           Reservations
         </a>
+      <a
+  href="/admin/users"
+  className="hover:text-blue-400"
+>
+  Users
+</a>
       </nav>
     </div>
   );
