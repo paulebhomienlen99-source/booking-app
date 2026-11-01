@@ -319,57 +319,55 @@ const filteredUsers = users.filter(
                       </option>
                     </select>
 
-                    {u.is_active ? (
-  <button
-    onClick={() =>
-      handleSuspend(
-        u.id
-      )
-    }
-  >
-    Suspend
-  </button>
-) : (
-  <button
-    onClick={() =>
-      handleReactivate(
-        u.id
-      )
-    }
-  >
-    Reactivate
-  </button>
-)}
+                                        {u.is_active ? (
+                      <button
+                        onClick={() =>
+                          handleSuspend(u.id)
+                        }
+                      >
+                        Suspend
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          handleReactivate(u.id)
+                        }
+                      >
+                        Reactivate
+                      </button>
+                    )}
 
-<button
-  onClick={() =>
-    handleView(u.id)
-  }
->
-  View
-</button>
+                    <button
+                      onClick={() =>
+                        handleView(u.id)
+                      }
+                    >
+                      View
+                    </button>
 
-<button
-  style={{
-    background: "#dc2626",
-    color: "white",
-    border: "none",
-    padding: "4px 8px",
-    cursor: "pointer",
-  }}
-  onClick={() =>
-    handleDelete(u.id)
-  }
->
-  Delete
-</button>
+                    <button
+                      style={{
+                        backgroundColor: "#dc2626",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                      onClick={() =>
+                        handleDelete(u.id)
+                      }
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>
             )
           )}
         </tbody>
-            </table>
+      </table>
 
       {showDetails &&
         selectedUser && (
