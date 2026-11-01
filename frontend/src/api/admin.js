@@ -110,4 +110,14 @@ export async function getUsers() {
 
   return response.data;
 }
+export async function changeUserRole(
+  id,
+  role
+) {
+  const response = await API.patch(
+    `/users/${id}/role`,
+    { role }
+  );
 
+  return response.data;
+}

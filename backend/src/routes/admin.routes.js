@@ -549,4 +549,58 @@ router.get("/users", async (req, res) => {
     });
   }
 });
+/*
+=====================================
+CHANGE USER ROLE
+=====================================
+*/
+
+router.patch("/users/:id/role", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    const allowedRoles = [
+      "customer",
+      "provider",
+      "admin",
+    ];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid role",
+      });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET role = $1
+      WHERE id = $2
+      RETURNING id, email, role
+      `,
+      [role, id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
 export default router;

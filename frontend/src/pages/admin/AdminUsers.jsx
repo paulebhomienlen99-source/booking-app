@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { getUsers } from "../../api/admin";
+import {
+  getUsers,
+  changeUserRole,
+} from "../../api/admin";
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -18,6 +21,22 @@ export default function AdminUsers() {
       if (data.success) {
         setUsers(data.users);
       }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function handleRoleChange(
+    userId,
+    newRole
+  ) {
+    try {
+      await changeUserRole(
+        userId,
+        newRole
+      );
+
+      await loadUsers();
     } catch (error) {
       console.error(error);
     }
@@ -180,6 +199,7 @@ export default function AdminUsers() {
             <th>ID</th>
             <th>Email</th>
             <th>Role</th>
+            <th>Actions</th>
           </tr>
         </thead>
 
@@ -192,6 +212,30 @@ export default function AdminUsers() {
                 <td>{u.email}</td>
 
                 <td>{u.role}</td>
+
+                <td>
+                  <select
+                    value={u.role}
+                    onChange={(e) =>
+                      handleRoleChange(
+                        u.id,
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="customer">
+                      Customer
+                    </option>
+
+                    <option value="provider">
+                      Provider
+                    </option>
+
+                    <option value="admin">
+                      Admin
+                    </option>
+                  </select>
+                </td>
               </tr>
             )
           )}
