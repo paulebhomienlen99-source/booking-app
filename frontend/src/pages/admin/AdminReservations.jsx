@@ -11,15 +11,19 @@ export default function AdminReservations() {
   }, []);
 
   async function loadReservations() {
-    const data = await getReservations();
+    try {
+      const data = await getReservations();
 
-    if (data.success) {
-      setReservations(data.reservations);
+      if (data.success) {
+        setReservations(data.reservations);
+      }
+    } catch (error) {
+      console.error(error);
     }
   }
 
-  const filteredReservations =
-    reservations.filter((r) => {
+  const filteredReservations = reservations.filter(
+    (r) => {
       const matchesStatus =
         statusFilter === "all"
           ? true
@@ -34,15 +38,78 @@ export default function AdminReservations() {
           .includes(search.toLowerCase());
 
       return matchesStatus && matchesSearch;
-    });
+    }
+  );
+
+  function exportCSV() {
+    const headers = [
+      "ID",
+      "Cliente",
+      "Servizio",
+      "Stato",
+      "Data",
+    ];
+
+    const rows = filteredReservations.map(
+      (r) => [
+        r.id,
+        r.customer_name,
+        r.service_name,
+        r.status,
+        new Date(
+          r.created_at
+        ).toLocaleString("it-IT"),
+      ]
+    );
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        row.join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob(
+      [csvContent],
+      {
+        type: "text/csv;charset=utf-8;",
+      }
+    );
+
+    const link =
+      document.createElement("a");
+
+    link.href =
+      URL.createObjectURL(blob);
+
+    link.download =
+      `reservations-${Date.now()}.csv`;
+
+    link.click();
+  }
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>📋 Gestione Prenotazioni</h1>
 
+      <button
+        onClick={exportCSV}
+        style={{
+          backgroundColor: "#2563eb",
+          color: "white",
+          padding: "10px 16px",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          marginTop: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        ⬇️ Export CSV
+      </button>
+
       <p>
-        Totale prenotazioni:
-        {" "}
+        Totale prenotazioni:{" "}
         <strong>
           {filteredReservations.length}
         </strong>
@@ -74,7 +141,9 @@ export default function AdminReservations() {
           onChange={(e) =>
             setStatusFilter(e.target.value)
           }
-          style={{ padding: "10px" }}
+          style={{
+            padding: "10px",
+          }}
         >
           <option value="all">
             Tutte
@@ -109,39 +178,51 @@ export default function AdminReservations() {
         </thead>
 
         <tbody>
-          {filteredReservations.map((r) => (
-            <tr key={r.id}>
-              <td>{r.id}</td>
+          {filteredReservations.map(
+            (r) => (
+              <tr key={r.id}>
+                <td>{r.id}</td>
 
-              <td>{r.customer_name}</td>
+                <td>
+                  {r.customer_name}
+                </td>
 
-              <td>{r.service_name}</td>
+                <td>
+                  {r.service_name}
+                </td>
 
-              <td>
-                <span
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: "20px",
-                    color: "white",
-                    backgroundColor:
-                      r.status === "confirmed"
-                        ? "green"
-                        : "red",
-                  }}
-                >
-                  {r.status}
-                </span>
-              </td>
+                <td>
+                  <span
+                    style={{
+                      padding:
+                        "4px 10px",
+                      borderRadius:
+                        "20px",
+                      color: "white",
+                      backgroundColor:
+                        r.status ===
+                        "confirmed"
+                          ? "green"
+                          : "red",
+                    }}
+                  >
+                    {r.status}
+                  </span>
+                </td>
 
-              <td>
-                {new Date(
-                  r.created_at
-                ).toLocaleString("it-IT")}
-              </td>
-            </tr>
-          ))}
+                <td>
+                  {new Date(
+                    r.created_at
+                  ).toLocaleString(
+                    "it-IT"
+                  )}
+                </td>
+              </tr>
+            )
+          )}
         </tbody>
       </table>
     </div>
   );
 }
+
