@@ -39,3 +39,11 @@ Booking + PayPal Flow
 Status: COMPLETED ✅
 
 Tests: ✅ Service approval ✅ Slot visibility ✅ Booking creation ✅ PayPal Sandbox payment ✅ Payment Success page ✅ Booking confirmation ✅ Provider booking visibility ✅ Customer review submission ✅ Provider review visibility
+Email Notifications
+Status: VERIFIED ✅
+
+Customer email: ✅ Prenotazione confermata
+
+Provider email: ✅ Invio funzionante ⚠️ Provider attuale utilizza email di test: provider1@example.com
+
+Azione futura: Aggiornare l'email del provider con un indirizzo reale.
