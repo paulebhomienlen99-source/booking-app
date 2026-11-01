@@ -98,4 +98,16 @@ export async function getReservations() {
 
   return response.data;
 }
+/*
+=====================================
+ADMIN USERS
+=====================================
+*/
+
+export async function getUsers() {
+  const response =
+    await API.get("/users");
+
+  return response.data;
+}
 
