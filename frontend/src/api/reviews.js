@@ -1,15 +1,15 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config/api";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api/reviews",
+  baseURL: `${API_BASE_URL}/reviews`,
 });
 
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
   if (token) {
-    config.headers.Authorization =
-      `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
@@ -29,25 +29,14 @@ export function createReview({
   });
 }
 
-export function getProviderReviews(
-  providerId
-) {
-  return API.get(
-    `/provider/${providerId}`
-  );
+export function getProviderReviews(providerId) {
+  return API.get(`/provider/${providerId}`);
 }
 
-export function getProviderRating(
-  providerId
-) {
-  return API.get(
-    `/provider/${providerId}/rating`
-  );
+export function getProviderRating(providerId) {
+  return API.get(`/provider/${providerId}/rating`);
 }
-export function getReviewByReservation(
-  reservationId
-) {
-  return API.get(
-    `/reservation/${reservationId}`
-  );
+
+export function getReviewByReservation(reservationId) {
+  return API.get(`/reservation/${reservationId}`);
 }
