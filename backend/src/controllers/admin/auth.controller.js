@@ -1,7 +1,7 @@
 import { pool } from "../../config/db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
+import { JWT_SECRET } from "../../config/env.js";
 export const adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -27,10 +27,10 @@ export const adminLogin = async (req, res) => {
 
     // 3. Genera token
     const token = jwt.sign(
-      { id: admin.id, role: admin.role },
-      process.env.JWT_SECRET || "secretkey",
-      { expiresIn: "1h" }
-    );
+  { id: admin.id, role: admin.role },
+  JWT_SECRET,
+  { expiresIn: "1h" }
+);
 
     return res.json({ token });
   } catch (err) {
