@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
 import {
   getUsers,
+  getUserDetails,
   changeUserRole,
   suspendUser,
   reactivateUser,
@@ -11,7 +11,11 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] =
     useState("all");
+  const [selectedUser, setSelectedUser] =
+    useState(null);
 
+  const [showDetails, setShowDetails] =
+    useState(false);
   useEffect(() => {
     loadUsers();
   }, []);
@@ -61,7 +65,19 @@ export default function AdminUsers() {
       console.error(error);
     }
   }
+async function handleView(id) {
+  try {
+    const data =
+      await getUserDetails(id);
 
+    if (data.success) {
+      setSelectedUser(data.user);
+      setShowDetails(true);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
   const filteredUsers = users.filter(
     (u) => {
       const matchesSearch =
@@ -274,33 +290,107 @@ export default function AdminUsers() {
                     </select>
 
                     {u.is_active ? (
-                      <button
-                        onClick={() =>
-                          handleSuspend(
-                            u.id
-                          )
-                        }
-                      >
-                        Suspend
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() =>
-                          handleReactivate(
-                            u.id
-                          )
-                        }
-                      >
-                        Reactivate
-                      </button>
-                    )}
+  <button
+    onClick={() =>
+      handleSuspend(
+        u.id
+      )
+    }
+  >
+    Suspend
+  </button>
+) : (
+  <button
+    onClick={() =>
+      handleReactivate(
+        u.id
+      )
+    }
+  >
+    Reactivate
+  </button>
+)}
+
+<button
+  onClick={() =>
+    handleView(u.id)
+  }
+>
+  View
+</button>
                   </div>
                 </td>
               </tr>
             )
           )}
         </tbody>
-      </table>
+            </table>
+
+      {showDetails &&
+        selectedUser && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background:
+                "rgba(0,0,0,0.5)",
+              display: "flex",
+              justifyContent:
+                "center",
+              alignItems:
+                "center",
+            }}
+          >
+            <div
+              style={{
+                background: "white",
+                padding: "20px",
+                borderRadius: "10px",
+                minWidth: "400px",
+              }}
+            >
+              <h2>User Details</h2>
+
+              <p>
+                <strong>ID:</strong>{" "}
+                {selectedUser.id}
+              </p>
+
+              <p>
+                <strong>Name:</strong>{" "}
+                {selectedUser.name}
+              </p>
+
+              <p>
+                <strong>Email:</strong>{" "}
+                {selectedUser.email}
+              </p>
+
+              <p>
+                <strong>Role:</strong>{" "}
+                {selectedUser.role}
+              </p>
+
+              <p>
+                <strong>Status:</strong>{" "}
+                {selectedUser.is_active
+                  ? "✅ Active"
+                  : "⛔ Suspended"}
+              </p>
+
+              <button
+                onClick={() =>
+                  setShowDetails(false)
+                }
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

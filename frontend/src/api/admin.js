@@ -136,3 +136,10 @@ export async function reactivateUser(id) {
 
   return response.data;
 }
+export async function getUserDetails(id) {
+  const response = await API.get(
+    `/users/${id}`
+  );
+
+  return response.data;
+}
