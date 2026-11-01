@@ -143,3 +143,10 @@ export async function getUserDetails(id) {
 
   return response.data;
 }
+export async function deleteUser(id) {
+  const response = await API.delete(
+    `/users/${id}`
+  );
+
+  return response.data;
+}

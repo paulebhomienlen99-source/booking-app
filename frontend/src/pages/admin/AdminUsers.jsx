@@ -5,6 +5,7 @@ import {
   changeUserRole,
   suspendUser,
   reactivateUser,
+  deleteUser,
 } from "../../api/admin";
 
 export default function AdminUsers() {
@@ -79,7 +80,34 @@ async function handleView(id) {
     console.error(error);
   }
 }
-  const filteredUsers = users.filter(
+  async function handleDelete(id) {
+  const confirmed = window.confirm(
+    "Sei sicuro di voler eliminare questo utente?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteUser(id);
+
+    await loadUsers();
+
+    if (
+      selectedUser &&
+      selectedUser.id === id
+    ) {
+      setSelectedUser(null);
+      setShowDetails(false);
+    }
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      "Impossibile eliminare questo utente"
+    );
+  }
+}
+const filteredUsers = users.filter(
     (u) => {
       const matchesSearch =
         u.email
@@ -318,6 +346,21 @@ async function handleView(id) {
   }
 >
   View
+</button>
+
+<button
+  style={{
+    background: "#dc2626",
+    color: "white",
+    border: "none",
+    padding: "4px 8px",
+    cursor: "pointer",
+  }}
+  onClick={() =>
+    handleDelete(u.id)
+  }
+>
+  Delete
 </button>
                   </div>
                 </td>
