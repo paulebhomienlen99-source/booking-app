@@ -69,11 +69,11 @@ const rows = filteredReservations.map(
 );
 
     const csvContent = [
-      headers.join(","),
-      ...rows.map((row) =>
-        row.join(",")
-      ),
-    ].join("\n");
+  headers.join(";"),
+  ...rows.map((row) =>
+    row.join(";")
+  ),
+].join("\n");
 
     const blob = new Blob(
       [csvContent],
