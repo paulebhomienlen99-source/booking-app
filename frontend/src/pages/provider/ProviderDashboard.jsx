@@ -39,7 +39,9 @@ const [bookings, setBookings] =
     monthlyRevenue: [],
   });
   useEffect(() => {
-    const providerId = 1;
+  const providerId = Number(
+    localStorage.getItem("userId")
+  );
 
     if (!providerId) return;
 
