@@ -717,4 +717,60 @@ router.patch("/users/:id/reactivate", async (req, res) => {
     });
   }
 });
+/*
+=====================================
+DELETE USER
+=====================================
+*/
+
+router.delete("/users/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const userResult = await pool.query(
+      `
+      SELECT id, email, role
+      FROM users
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    if (!userResult.rows.length) {
+      return res.status(404).json({
+        success: false,
+        error: "User not found",
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    if (user.role === "admin") {
+      return res.status(403).json({
+        success: false,
+        error: "Cannot delete admin users",
+      });
+    }
+
+    await pool.query(
+      `
+      DELETE FROM users
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    res.json({
+      success: true,
+      message: "User deleted",
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
 export default router;
