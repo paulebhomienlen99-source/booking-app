@@ -12,6 +12,7 @@ import ServicesPending from "./pages/admin/ServicesPending";
 import AdminReservations from "./pages/admin/AdminReservations";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminReviews from "./pages/admin/AdminReviews";
 // PROVIDER
 import ProviderDashboard from "./pages/provider/ProviderDashboard";
 import ProviderSetup from "./pages/provider/ProviderSetup";
@@ -120,6 +121,14 @@ export default function App() {
     </ProtectedRoute>
   }
 />
+  <Route
+  path="/admin/reviews"
+  element={
+    <ProtectedRoute role="admin">
+      <AdminReviews />
+    </ProtectedRoute>
+  }
+/>      
         {/* PROVIDER */}
 
 <Route
