@@ -150,3 +150,15 @@ export async function deleteUser(id) {
 
   return response.data;
 }
+/*
+=====================================
+ADMIN REVIEWS
+=====================================
+*/
+
+export async function getReviews() {
+  const response =
+    await API.get("/reviews");
+
+  return response.data;
+}

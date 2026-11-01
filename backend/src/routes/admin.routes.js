@@ -856,10 +856,46 @@ router.delete("/users/:id", async (req, res) => {
     });
   }
 
-  res.status(500).json({
-    success: false,
-    error: "Internal server error",
-  });
+ res.status(500).json({
+  success: false,
+  error: "Internal server error",
+});
 }
 });
+
+/*
+=====================================
+ADMIN REVIEWS
+=====================================
+*/
+
+router.get("/reviews", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        id,
+        reservation_id,
+        customer_id,
+        provider_id,
+        rating,
+        comment,
+        created_at
+      FROM reviews
+      ORDER BY created_at DESC
+    `);
+
+    res.json({
+      success: true,
+      reviews: result.rows,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
+});
+
 export default router;
