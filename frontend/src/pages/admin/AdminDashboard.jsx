@@ -79,11 +79,57 @@ if (loading) {
       </div>
     );
   }
+function exportAnalyticsCSV() {
+  const rows = [
+    ["Metric", "Value"],
+    ["Users", stats?.users ?? 0],
+    ["Providers", stats?.providers ?? 0],
+    ["Services", stats?.services ?? 0],
+    ["Reservations", stats?.reservations ?? 0],
+    ["Cancelled Reservations", stats?.cancelledReservations ?? 0],
+    ["Reviews", stats?.reviews ?? 0],
+    ["Revenue", stats?.revenue ?? 0],
+  ];
 
+  const csv = rows
+    .map((row) => row.join(","))
+    .join("\n");
+
+  const blob = new Blob(
+    [csv],
+    {
+      type: "text/csv;charset=utf-8;",
+    }
+  );
+
+  const link =
+    document.createElement("a");
+
+  link.href =
+    URL.createObjectURL(blob);
+
+  link.download =
+    "analytics-export.csv";
+
+  link.click();
+}
   return (
     <div style={{ padding: "20px" }}>
       <h1>Dashboard Admin</h1>
-
+<button
+  onClick={exportAnalyticsCSV}
+  style={{
+    backgroundColor: "#2563eb",
+    color: "#fff",
+    border: "none",
+    padding: "10px 16px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    marginBottom: "20px",
+  }}
+>
+  ⬇️ Export Analytics CSV
+</button>
       <div
   style={{
     display: "grid",
