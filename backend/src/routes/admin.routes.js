@@ -477,6 +477,35 @@ const topProviders =
     ORDER BY
       DATE_TRUNC('day', created_at)
   `);
+  const revenueTrend =
+  await pool.query(`
+    SELECT
+      TO_CHAR(
+        DATE_TRUNC('day', r.created_at),
+        'DD Mon'
+      ) AS day,
+
+      COALESCE(
+        SUM(s.price),
+        0
+      ) AS revenue
+
+    FROM reservations r
+
+    JOIN services s
+      ON s.id = r.listing_id
+
+    WHERE
+      r.status = 'confirmed'
+      AND r.created_at >=
+        NOW() - INTERVAL '30 days'
+
+    GROUP BY
+      DATE_TRUNC('day', r.created_at)
+
+    ORDER BY
+      DATE_TRUNC('day', r.created_at)
+  `);
   const monthlyRevenue =
   await pool.query(
     `
@@ -556,7 +585,8 @@ topProviders:
 ),
 bookingTrend:
   bookingTrend.rows,
-
+revenueTrend:
+  revenueTrend.rows,
 monthlyRevenue:
   monthlyRevenue.rows,
       },
