@@ -242,6 +242,68 @@ function exportAnalyticsCSV() {
   </div>
 <div
   style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}
+>
+  <h3>👤 Nuovi Utenti (30 giorni)</h3>
+
+  <p
+    style={{
+      fontSize: "28px",
+      fontWeight: "bold",
+      color: "#2563eb",
+    }}
+  >
+    +{stats?.newUsers ?? 0}
+  </p>
+</div>
+
+<div
+  style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}
+>
+  <h3>🏢 Nuovi Provider (30 giorni)</h3>
+
+  <p
+    style={{
+      fontSize: "28px",
+      fontWeight: "bold",
+      color: "#16a34a",
+    }}
+  >
+    +{stats?.newProviders ?? 0}
+  </p>
+</div>
+
+<div
+  style={{
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    background: "#fff",
+  }}
+>
+  <h3>⭐ Nuove Recensioni (30 giorni)</h3>
+
+  <p
+    style={{
+      fontSize: "28px",
+      fontWeight: "bold",
+      color: "#f59e0b",
+    }}
+  >
+    +{stats?.newReviews ?? 0}
+  </p>
+</div>
+<div
+  style={{
     background: "#fff",
     padding: "20px",
     borderRadius: "8px",

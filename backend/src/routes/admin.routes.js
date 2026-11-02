@@ -506,6 +506,29 @@ const topProviders =
     ORDER BY
       DATE_TRUNC('day', r.created_at)
   `);
+  const newUsers =
+  await pool.query(`
+    SELECT COUNT(*) AS count
+    FROM users
+    WHERE created_at >=
+      NOW() - INTERVAL '30 days'
+  `);
+
+const newProviders =
+  await pool.query(`
+    SELECT COUNT(*) AS count
+    FROM providers
+    WHERE created_at >=
+      NOW() - INTERVAL '30 days'
+  `);
+
+const newReviews =
+  await pool.query(`
+    SELECT COUNT(*) AS count
+    FROM reviews
+    WHERE created_at >=
+      NOW() - INTERVAL '30 days'
+  `);
   const monthlyRevenue =
   await pool.query(
     `
@@ -579,7 +602,17 @@ topProviders:
         reviews: Number(
           reviews.rows[0].count
         ),
+newUsers: Number(
+  newUsers.rows[0].count
+),
 
+newProviders: Number(
+  newProviders.rows[0].count
+),
+
+newReviews: Number(
+  newReviews.rows[0].count
+),
         revenue: Number(
   revenue.rows[0].revenue
 ),
