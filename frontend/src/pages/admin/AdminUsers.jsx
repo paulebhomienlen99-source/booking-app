@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AdminLayout from "../../components/admin/AdminLayout";
 import {
   getUsers,
   getUserDetails,
@@ -177,6 +178,7 @@ const filteredUsers = users.filter(
   }
 
   return (
+  <AdminLayout>
     <div style={{ padding: "20px" }}>
       <h1>
         👥 Gestione Utenti
@@ -437,6 +439,7 @@ const filteredUsers = users.filter(
             </div>
           </div>
         )}
-    </div>
+        </div>
+  </AdminLayout>
   );
 }

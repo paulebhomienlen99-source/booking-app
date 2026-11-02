@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AdminLayout from "../../components/admin/AdminLayout";
 import {
   getReviews,
   deleteReview,
@@ -60,6 +61,7 @@ async function handleDelete(id) {
     );
   });
 return (
+  <AdminLayout>
     <div style={{ padding: "20px" }}>
       <h1>⭐ Gestione Recensioni</h1>
 
@@ -179,6 +181,7 @@ return (
     ))}
   </tbody>
 </table>
-    </div>
+        </div>
+  </AdminLayout>
   );
 }
