@@ -1,3 +1,5 @@
+import AdminLayout from "../../components/admin/AdminLayout";
+import AdminSidebar from "../../components/admin/AdminSidebar";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { jsPDF } from "jspdf";
@@ -186,6 +188,7 @@ function exportAnalyticsPDF() {
   return (
     <div style={{ padding: "20px" }}>
       <h1>Dashboard Admin</h1>
+<AdminSidebar />
 <div
   style={{
     display: "flex",
