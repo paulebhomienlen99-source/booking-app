@@ -461,6 +461,22 @@ const topProviders =
     ORDER BY rating DESC
     LIMIT 5
   `);
+  const bookingTrend =
+  await pool.query(`
+    SELECT
+      TO_CHAR(
+        DATE_TRUNC('day', created_at),
+        'DD Mon'
+      ) AS day,
+      COUNT(*) AS bookings
+    FROM reservations
+    WHERE created_at >=
+      NOW() - INTERVAL '30 days'
+    GROUP BY
+      DATE_TRUNC('day', created_at)
+    ORDER BY
+      DATE_TRUNC('day', created_at)
+  `);
   const monthlyRevenue =
   await pool.query(
     `
@@ -538,6 +554,8 @@ topProviders:
         revenue: Number(
   revenue.rows[0].revenue
 ),
+bookingTrend:
+  bookingTrend.rows,
 
 monthlyRevenue:
   monthlyRevenue.rows,

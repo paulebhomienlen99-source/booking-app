@@ -57,7 +57,8 @@ const bookingData = [
 ];
   const revenueData =
   stats?.monthlyRevenue ?? [];
-
+const bookingTrendData =
+  stats?.bookingTrend ?? [];
 console.log("STATS:", stats);
 console.log(
   "MONTHLY REVENUE:",
@@ -302,6 +303,38 @@ function exportAnalyticsCSV() {
     </BarChart>
   </ResponsiveContainer>
 </div>
+  <div
+  style={{
+    background: "#fff",
+    padding: "20px",
+    borderRadius: "8px",
+    marginTop: "30px",
+  }}
+>
+  <h3>📈 Booking Trend (Ultimi 30 Giorni)</h3>
+
+  <ResponsiveContainer
+    width="100%"
+    height={300}
+  >
+    <BarChart data={bookingTrendData}>
+      <CartesianGrid
+        strokeDasharray="3 3"
+      />
+
+      <XAxis dataKey="day" />
+
+      <YAxis />
+
+      <Tooltip />
+
+      <Bar
+        dataKey="bookings"
+        fill="#f59e0b"
+      />
+    </BarChart>
+  </ResponsiveContainer>
+</div>    
       <div style={{ marginTop: "30px" }}>
         <h2>Gestione</h2>
 
