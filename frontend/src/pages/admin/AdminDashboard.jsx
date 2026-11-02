@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { jsPDF } from "jspdf";
 import {
   getStats,
   getReservations,
@@ -82,7 +83,73 @@ if (loading) {
       </div>
     );
   }
-function exportAnalyticsCSV() {
+function exportAnalyticsPDF() {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text("BookHub Analytics Report", 20, 20);
+
+  doc.setFontSize(12);
+
+  doc.text(
+    `Users: ${stats?.users ?? 0}`,
+    20,
+    40
+  );
+
+  doc.text(
+    `Providers: ${stats?.providers ?? 0}`,
+    20,
+    50
+  );
+
+  doc.text(
+    `Services: ${stats?.services ?? 0}`,
+    20,
+    60
+  );
+
+  doc.text(
+    `Reservations: ${stats?.reservations ?? 0}`,
+    20,
+    70
+  );
+
+  doc.text(
+    `Reviews: ${stats?.reviews ?? 0}`,
+    20,
+    80
+  );
+
+  doc.text(
+    `Revenue: €${stats?.revenue ?? 0}`,
+    20,
+    90
+  );
+
+  doc.text(
+    `New Users (30 days): ${stats?.newUsers ?? 0}`,
+    20,
+    110
+  );
+
+  doc.text(
+    `New Providers (30 days): ${stats?.newProviders ?? 0}`,
+    20,
+    120
+  );
+
+  doc.text(
+    `New Reviews (30 days): ${stats?.newReviews ?? 0}`,
+    20,
+    130
+  );
+
+  doc.save(
+    "BookHub-Analytics-Report.pdf"
+  );
+}
+  function exportAnalyticsCSV() {
   const rows = [
     ["Metric", "Value"],
     ["Users", stats?.users ?? 0],
@@ -119,20 +186,41 @@ function exportAnalyticsCSV() {
   return (
     <div style={{ padding: "20px" }}>
       <h1>Dashboard Admin</h1>
-<button
-  onClick={exportAnalyticsCSV}
+<div
   style={{
-    backgroundColor: "#2563eb",
-    color: "#fff",
-    border: "none",
-    padding: "10px 16px",
-    borderRadius: "8px",
-    cursor: "pointer",
+    display: "flex",
+    gap: "10px",
     marginBottom: "20px",
   }}
 >
-  ⬇️ Export Analytics CSV
-</button>
+  <button
+    onClick={exportAnalyticsCSV}
+    style={{
+      backgroundColor: "#2563eb",
+      color: "#fff",
+      border: "none",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      cursor: "pointer",
+    }}
+  >
+    ⬇️ Export Analytics CSV
+  </button>
+
+  <button
+    onClick={exportAnalyticsPDF}
+    style={{
+      backgroundColor: "#dc2626",
+      color: "#fff",
+      border: "none",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      cursor: "pointer",
+    }}
+  >
+    📄 Export PDF Report
+  </button>
+</div>
       <div
   style={{
     display: "grid",
