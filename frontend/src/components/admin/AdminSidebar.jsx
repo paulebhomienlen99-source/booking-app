@@ -11,31 +11,43 @@ export default function AdminSidebar() {
     textDecoration: "none",
     padding: "12px",
     borderRadius: "8px",
-    background: isActive
+    backgroundColor: isActive
       ? "#2563eb"
       : "#1f2937",
     fontWeight: "500",
-    transition: "0.2s",
+    transition: "all 0.2s ease",
   });
+
+  const sectionTitleStyle = {
+    color: "#9ca3af",
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "1px",
+    marginTop: "15px",
+    marginBottom: "5px",
+    fontWeight: "bold",
+  };
 
   return (
     <div
       style={{
-        width: "240px",
+        width: "250px",
         minHeight: "100vh",
         background: "#111827",
         color: "#fff",
         padding: "20px",
         boxSizing: "border-box",
+        borderRight: "1px solid #1f2937",
       }}
     >
       <h2
         style={{
           marginBottom: "30px",
           textAlign: "center",
+          fontWeight: "bold",
         }}
       >
-        BookHub Admin
+        🚀 BookHub Admin
       </h2>
 
       <div
@@ -45,6 +57,10 @@ export default function AdminSidebar() {
           gap: "10px",
         }}
       >
+        <div style={sectionTitleStyle}>
+          Analytics
+        </div>
+
         <NavLink
           to="/admin"
           end
@@ -52,6 +68,10 @@ export default function AdminSidebar() {
         >
           📊 Dashboard
         </NavLink>
+
+        <div style={sectionTitleStyle}>
+          Management
+        </div>
 
         <NavLink
           to="/admin/users"
@@ -91,7 +111,7 @@ export default function AdminSidebar() {
         <button
           onClick={logout}
           style={{
-            marginTop: "20px",
+            marginTop: "25px",
             background: "#dc2626",
             color: "#fff",
             border: "none",
