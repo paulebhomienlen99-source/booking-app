@@ -522,55 +522,6 @@ function exportAnalyticsPDF() {
     </BarChart>
   </ResponsiveContainer>
 </div> 
-      <div style={{ marginTop: "30px" }}>
-        <h2>Gestione</h2>
-
-        <div
-          style={{
-            display: "flex",
-            gap: "12px",
-            marginTop: "12px",
-          }}
-        >
-          <Link
-            to="/admin/providers"
-            style={{
-              padding: "10px 18px",
-              background: "#2563eb",
-              color: "#fff",
-              textDecoration: "none",
-              borderRadius: "6px",
-            }}
-          >
-            Provider Pending
-          </Link>
-
-          <Link
-            to="/admin/services"
-            style={{
-              padding: "10px 18px",
-              background: "#16a34a",
-              color: "#fff",
-              textDecoration: "none",
-              borderRadius: "6px",
-            }}
-          >
-            Services Pending
-</Link>
-<Link
-  to="/admin/reviews"
-  style={{
-    padding: "10px 18px",
-    background: "#f59e0b",
-    color: "#fff",
-    textDecoration: "none",
-    borderRadius: "6px",
-  }}
->
-  Reviews
-</Link>
-</div>
-</div>
 <div
   style={{
     marginTop: "40px",
