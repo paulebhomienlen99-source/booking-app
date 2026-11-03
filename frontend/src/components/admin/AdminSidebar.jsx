@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 export default function AdminSidebar() {
   const logout = () => {
@@ -6,14 +6,17 @@ export default function AdminSidebar() {
     window.location.href = "/admin/login";
   };
 
-  const linkStyle = {
+  const linkStyle = ({ isActive }) => ({
     color: "#fff",
     textDecoration: "none",
     padding: "12px",
     borderRadius: "8px",
-    background: "#1f2937",
+    background: isActive
+      ? "#2563eb"
+      : "#1f2937",
     fontWeight: "500",
-  };
+    transition: "0.2s",
+  });
 
   return (
     <div
@@ -42,47 +45,48 @@ export default function AdminSidebar() {
           gap: "10px",
         }}
       >
-        <Link
+        <NavLink
           to="/admin"
+          end
           style={linkStyle}
         >
           📊 Dashboard
-        </Link>
+        </NavLink>
 
-        <Link
+        <NavLink
           to="/admin/users"
           style={linkStyle}
         >
           👤 Users
-        </Link>
+        </NavLink>
 
-        <Link
+        <NavLink
           to="/admin/reservations"
           style={linkStyle}
         >
           📅 Reservations
-        </Link>
+        </NavLink>
 
-        <Link
+        <NavLink
           to="/admin/reviews"
           style={linkStyle}
         >
           ⭐ Reviews
-        </Link>
+        </NavLink>
 
-        <Link
+        <NavLink
           to="/admin/providers"
           style={linkStyle}
         >
           🏢 Providers
-        </Link>
+        </NavLink>
 
-        <Link
+        <NavLink
           to="/admin/services"
           style={linkStyle}
         >
           🛠 Services
-        </Link>
+        </NavLink>
 
         <button
           onClick={logout}
