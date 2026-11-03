@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getReservations } from "../../api/admin";
-
+import AdminLayout from "../../components/admin/AdminLayout";
 export default function AdminReservations() {
   const [reservations, setReservations] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -99,6 +99,7 @@ link.download =
   }
 
   return (
+  <AdminLayout>
     <div style={{ padding: "20px" }}>
       <h1>📋 Gestione Prenotazioni</h1>
 
@@ -232,7 +233,7 @@ link.download =
           )}
         </tbody>
       </table>
-    </div>
+        </div>
+  </AdminLayout>
   );
 }
-
