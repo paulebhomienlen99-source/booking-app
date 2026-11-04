@@ -744,7 +744,7 @@ function exportAnalyticsPDF() {
     </thead>
 
     <tbody>
-      {reservations.map((r) => (
+  {reservations.slice(0, 10).map((r) => (
         <tr key={r.id}>
           <td>{r.id}</td>
           <td>{r.customer_name}</td>
