@@ -227,7 +227,8 @@ function exportAnalyticsPDF() {
       <div
   style={{
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(250px, 1fr))",
     gap: "20px",
     marginTop: "20px",
   }}
@@ -502,7 +503,7 @@ function exportAnalyticsPDF() {
 
   <ResponsiveContainer
     width="100%"
-    height={300}
+    height={400}
   >
     <BarChart data={revenueTrendData}>
       <CartesianGrid

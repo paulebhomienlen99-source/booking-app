@@ -31,14 +31,15 @@ export default function AdminSidebar() {
   return (
     <div
       style={{
-        width: "250px",
-        minHeight: "100vh",
-        background: "#111827",
-        color: "#fff",
-        padding: "20px",
-        boxSizing: "border-box",
-        borderRight: "1px solid #1f2937",
-      }}
+  width: "220px",
+  flexShrink: 0,
+  minHeight: "100vh",
+  background: "#111827",
+  color: "#fff",
+  padding: "20px",
+  boxSizing: "border-box",
+  borderRight: "1px solid #1f2937",
+}}
     >
       <h2
         style={{
