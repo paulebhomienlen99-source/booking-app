@@ -257,15 +257,21 @@ const filteredUsers = users.filter(
         </select>
       </div>
 
-      <table
-        border="1"
-        cellPadding="10"
-        style={{
-          width: "100%",
-          borderCollapse:
-            "collapse",
-        }}
-      >
+      <div
+  style={{
+    overflowX: "auto",
+    width: "100%",
+  }}
+>
+  <table
+    border="1"
+    cellPadding="10"
+    style={{
+      width: "100%",
+      minWidth: "900px",
+      borderCollapse: "collapse",
+    }}
+  >
         <thead>
           <tr>
             <th>ID</th>
@@ -373,7 +379,7 @@ const filteredUsers = users.filter(
           )}
         </tbody>
       </table>
-
+         </div> 
       {showDetails &&
         selectedUser && (
           <div
