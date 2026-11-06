@@ -1,5 +1,4 @@
 import AdminLayout from "../../components/admin/AdminLayout";
-import AdminSidebar from "../../components/admin/AdminSidebar";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { jsPDF } from "jspdf";
@@ -188,7 +187,6 @@ function exportAnalyticsPDF() {
   return (
     <div style={{ padding: "20px" }}>
       <h1>Dashboard Admin</h1>
-<AdminSidebar />
 <div
   style={{
     display: "flex",
@@ -227,8 +225,8 @@ function exportAnalyticsPDF() {
       <div
   style={{
     display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(250px, 1fr))",
+   gridTemplateColumns:
+  "repeat(auto-fit, minmax(350px, 1fr))",
     gap: "20px",
     marginTop: "20px",
   }}
@@ -281,12 +279,15 @@ function exportAnalyticsPDF() {
     </p>
   </div>
 
-  <div style={{
+ <div
+  style={{
     padding: "20px",
-    border: "1px solid #ddd",
+    border: "1px solid #334155",
     borderRadius: "8px",
-    background: "#fff",
-  }}>
+    background: "#1e293b",
+    color: "#ffffff",
+  }}
+>
     <h3>Prenotazioni Totali</h3>
     <p style={{ fontSize: "28px", fontWeight: "bold" }}>
       {stats?.reservations ?? 0}
@@ -394,31 +395,29 @@ function exportAnalyticsPDF() {
     +{stats?.newReviews ?? 0}
   </p>
 </div>
+
+</div>
+
 <div
   style={{
     background: "#fff",
     padding: "20px",
     borderRadius: "8px",
     marginTop: "30px",
+    border: "1px solid #ddd",
   }}
 >
   <h3>📊 Prenotazioni</h3>
 
   <ResponsiveContainer
-    width="100%"
-    height={300}
-  >
+  width="100%"
+  height={350}
+>
     <BarChart data={bookingData}>
-      <CartesianGrid
-        strokeDasharray="3 3"
-      />
-
+      <CartesianGrid strokeDasharray="3 3" />
       <XAxis dataKey="name" />
-
       <YAxis />
-
       <Tooltip />
-
       <Bar
         dataKey="valore"
         fill="#2563eb"
@@ -426,8 +425,8 @@ function exportAnalyticsPDF() {
     </BarChart>
   </ResponsiveContainer>
 </div>
-</div>
-    <div
+
+<div
   style={{
     background: "#fff",
     padding: "20px",
@@ -544,8 +543,25 @@ function exportAnalyticsPDF() {
 >
   <thead>
     <tr>
-      <th>Provider</th>
-      <th>Prenotazioni</th>
+      <th
+        style={{
+          padding: "12px",
+          textAlign: "left",
+          borderBottom: "2px solid #e5e7eb",
+        }}
+      >
+        Provider
+      </th>
+
+      <th
+        style={{
+          padding: "12px",
+          textAlign: "left",
+          borderBottom: "2px solid #e5e7eb",
+        }}
+      >
+        Prenotazioni
+      </th>
     </tr>
   </thead>
 
@@ -553,8 +569,23 @@ function exportAnalyticsPDF() {
     {stats?.topProviders?.map(
       (provider, index) => (
         <tr key={index}>
-          <td>{provider.name}</td>
-          <td>{provider.bookings}</td>
+          <td
+            style={{
+              padding: "12px",
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            {provider.name}
+          </td>
+
+          <td
+            style={{
+              padding: "12px",
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            {provider.bookings}
+          </td>
         </tr>
       )
     )}
@@ -571,33 +602,65 @@ function exportAnalyticsPDF() {
     border: "1px solid #ddd",
   }}
 >
-  <h2>👥 Top Customers</h2>
+ <h2>👥 Top Customers</h2>
 
-  <table
-    style={{
-      width: "100%",
-      marginTop: "15px",
-      borderCollapse: "collapse",
-    }}
-  >
-    <thead>
-      <tr>
-        <th>Cliente</th>
-        <th>Prenotazioni</th>
-      </tr>
-    </thead>
+<table
+  style={{
+    width: "100%",
+    marginTop: "15px",
+    borderCollapse: "collapse",
+  }}
+>
+  <thead>
+    <tr>
+      <th
+        style={{
+          padding: "12px",
+          textAlign: "left",
+          borderBottom: "2px solid #e5e7eb",
+        }}
+      >
+        Cliente
+      </th>
 
-    <tbody>
-      {stats?.topCustomers?.map(
-        (customer, index) => (
-          <tr key={index}>
-            <td>{customer.email}</td>
-            <td>{customer.bookings}</td>
-          </tr>
-        )
-      )}
-    </tbody>
-  </table>
+      <th
+        style={{
+          padding: "12px",
+          textAlign: "left",
+          borderBottom: "2px solid #e5e7eb",
+        }}
+      >
+        Prenotazioni
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {stats?.topCustomers?.map(
+      (customer, index) => (
+        <tr key={index}>
+          <td
+            style={{
+              padding: "12px",
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            {customer.email}
+          </td>
+
+          <td
+            style={{
+              padding: "12px",
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            {customer.bookings}
+          </td>
+        </tr>
+      )
+    )}
+  </tbody>
+</table>
 </div>
 
 <div

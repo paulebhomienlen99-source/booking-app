@@ -12,8 +12,8 @@ export default function AdminSidebar() {
     padding: "12px",
     borderRadius: "8px",
     backgroundColor: isActive
-      ? "#2563eb"
-      : "#1f2937",
+  ? "#3b82f6"
+  : "#1e293b",
     fontWeight: "500",
     transition: "all 0.2s ease",
   });
@@ -34,11 +34,11 @@ export default function AdminSidebar() {
   width: "220px",
   flexShrink: 0,
   minHeight: "100vh",
-  background: "#111827",
+  background: "#0f172a",
   color: "#fff",
   padding: "20px",
   boxSizing: "border-box",
-  borderRight: "1px solid #1f2937",
+  borderRight: "1px solid #334155",
 }}
     >
       <h2
