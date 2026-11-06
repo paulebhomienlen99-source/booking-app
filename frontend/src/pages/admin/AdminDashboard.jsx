@@ -567,13 +567,14 @@ color: "#fff",
         Provider
       </th>
 
-      <th
-        style={{
-          padding: "12px",
-          textAlign: "left",
-          borderBottom: "2px solid #e5e7eb",
-        }}
-      >
+<th
+  style={{
+    padding: "12px",
+    textAlign: "left",
+    borderBottom: "2px solid #334155",
+    color: "#ffffff",
+  }}
+>
         Prenotazioni
       </th>
     </tr>
@@ -592,12 +593,13 @@ color: "#fff",
             {provider.name}
           </td>
 
-          <td
-            style={{
-              padding: "12px",
-              borderBottom: "1px solid #e5e7eb",
-            }}
-          >
+  <td
+  style={{
+    padding: "12px",
+    borderBottom: "1px solid #334155",
+    color: "#e5e7eb",
+  }}
+>
             {provider.bookings}
           </td>
         </tr>
@@ -681,10 +683,11 @@ color: "#fff",
 <div
   style={{
     marginTop: "40px",
-    background: "#fff",
+    background: "#1e293b",
+    color: "#ffffff",
     padding: "20px",
     borderRadius: "8px",
-    border: "1px solid #ddd",
+    border: "1px solid #334155",
   }}
 >
   <h2>⭐ Most Booked Services</h2>
@@ -751,10 +754,11 @@ color: "#fff",
 <div
   style={{
     marginTop: "40px",
-    background: "#fff",
+    background: "#1e293b",
+    color: "#ffffff",
     padding: "20px",
     borderRadius: "8px",
-    border: "1px solid #ddd",
+    border: "1px solid #334155",
   }}
 >
   <h2>💰 Revenue Per Provider</h2>
@@ -785,14 +789,14 @@ color: "#fff",
     </tbody>
   </table>
 </div>
-
 <div
   style={{
     marginTop: "40px",
-    background: "#fff",
+    background: "#1e293b",
+    color: "#ffffff",
     padding: "20px",
     borderRadius: "8px",
-    border: "1px solid #ddd",
+    border: "1px solid #334155",
   }}
 >
   <h2>⭐ Top Rated Providers</h2>
@@ -829,10 +833,11 @@ color: "#fff",
 <div
   style={{
     marginTop: "40px",
-    background: "#fff",
+    background: "#1e293b",
+    color: "#ffffff",
     padding: "20px",
     borderRadius: "8px",
-    border: "1px solid #ddd",
+    border: "1px solid #334155",
   }}
 >
   <h2>Prenotazioni Recenti</h2>
@@ -843,23 +848,73 @@ color: "#fff",
       marginTop: "15px",
     }}
   >
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Cliente</th>
-        <th>Servizio</th>
-        <th>Stato</th>
-        <th>Data</th>
-      </tr>
-    </thead>
+   <thead>
+  <tr>
+    <th
+      style={{
+        padding: "12px",
+        textAlign: "left",
+        borderBottom: "2px solid #334155",
+      }}
+    >
+      ID
+    </th>
 
-    <tbody>
+    <th
+      style={{
+        padding: "12px",
+        textAlign: "left",
+        borderBottom: "2px solid #334155",
+      }}
+    >
+      Cliente
+    </th>
+
+    <th
+      style={{
+        padding: "12px",
+        textAlign: "left",
+        borderBottom: "2px solid #334155",
+      }}
+    >
+      Servizio
+    </th>
+
+    <th
+      style={{
+        padding: "12px",
+        textAlign: "left",
+        borderBottom: "2px solid #334155",
+      }}
+    >
+      Stato
+    </th>
+
+    <th
+      style={{
+        padding: "12px",
+        textAlign: "left",
+        borderBottom: "2px solid #334155",
+      }}
+    >
+      Data
+    </th>
+  </tr>
+</thead>
+   <tbody>
   {reservations.slice(0, 10).map((r) => (
-        <tr key={r.id}>
-          <td>{r.id}</td>
-          <td>{r.customer_name}</td>
-          <td>{r.service_name}</td>
-          <td>
+    <tr key={r.id}>
+      <td style={tdStyle}>{r.id}</td>
+
+      <td style={tdStyle}>
+        {r.customer_name}
+      </td>
+
+      <td style={tdStyle}>
+        {r.service_name}
+      </td>
+
+      <td style={tdStyle}>
   <span
     style={{
       padding: "4px 10px",
@@ -882,11 +937,11 @@ color: "#fff",
     {r.status}
   </span>
 </td>
-          <td>
-            {new Date(
-              r.created_at
-            ).toLocaleDateString()}
-          </td>
+   <td style={tdStyle}>
+  {new Date(
+    r.created_at
+  ).toLocaleDateString()}
+</td>       
         </tr>
       ))}
     </tbody>
