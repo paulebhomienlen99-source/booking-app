@@ -166,25 +166,31 @@ function exportAnalyticsPDF() {
     .map((row) => row.join(","))
     .join("\n");
 
-  const blob = new Blob(
-    [csv],
-    {
-      type: "text/csv;charset=utf-8;",
-    }
-  );
+  const blob = new Blob([csv], {
+    type: "text/csv;charset=utf-8;",
+  });
 
-  const link =
-    document.createElement("a");
+  const link = document.createElement("a");
 
-  link.href =
-    URL.createObjectURL(blob);
+  link.href = URL.createObjectURL(blob);
 
-  link.download =
-    "analytics-export.csv";
+  link.download = "analytics-export.csv";
 
   link.click();
 }
-  return (
+
+const thStyle = {
+  padding: "12px",
+  textAlign: "left",
+  borderBottom: "2px solid #e5e7eb",
+};
+
+const tdStyle = {
+  padding: "12px",
+  borderBottom: "1px solid #e5e7eb",
+};
+
+return (
     <div style={{ padding: "20px" }}>
       <h1>Dashboard Admin</h1>
 <div
@@ -674,31 +680,63 @@ function exportAnalyticsPDF() {
 >
   <h2>⭐ Most Booked Services</h2>
 
-  <table
-    style={{
-      width: "100%",
-      marginTop: "15px",
-      borderCollapse: "collapse",
-    }}
-  >
-    <thead>
-      <tr>
-        <th>Servizio</th>
-        <th>Prenotazioni</th>
-      </tr>
-    </thead>
+<table
+  style={{
+    width: "100%",
+    marginTop: "15px",
+    borderCollapse: "collapse",
+  }}
+>
+  <thead>
+    <tr>
+      <th
+        style={{
+          padding: "12px",
+          textAlign: "left",
+          borderBottom: "2px solid #e5e7eb",
+        }}
+      >
+        Servizio
+      </th>
 
-    <tbody>
-      {stats?.topServices?.map(
-        (service, index) => (
-          <tr key={index}>
-            <td>{service.title}</td>
-            <td>{service.bookings}</td>
-          </tr>
-        )
-      )}
-    </tbody>
-  </table>
+      <th
+        style={{
+          padding: "12px",
+          textAlign: "left",
+          borderBottom: "2px solid #e5e7eb",
+        }}
+      >
+        Prenotazioni
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {stats?.topServices?.map(
+      (service, index) => (
+        <tr key={index}>
+          <td
+            style={{
+              padding: "12px",
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            {service.title}
+          </td>
+
+          <td
+            style={{
+              padding: "12px",
+              borderBottom: "1px solid #e5e7eb",
+            }}
+          >
+            {service.bookings}
+          </td>
+        </tr>
+      )
+    )}
+  </tbody>
+</table>
 </div>
 
 <div
