@@ -182,13 +182,16 @@ function exportAnalyticsPDF() {
 const thStyle = {
   padding: "12px",
   textAlign: "left",
-  borderBottom: "2px solid #e5e7eb",
+  borderBottom: "2px solid #334155",
+  color: "#ffffff",
 };
 
 const tdStyle = {
   padding: "12px",
-  borderBottom: "1px solid #e5e7eb",
+  borderBottom: "1px solid #334155",
+  color: "#e5e7eb",
 };
+
 
 return (
     <div style={{ padding: "20px" }}>
@@ -406,7 +409,9 @@ return (
 
 <div
   style={{
-    background: "#fff",
+    background: "#1e293b",
+color: "#ffffff",
+border: "1px solid #334155",
     padding: "20px",
     borderRadius: "8px",
     marginTop: "30px",
@@ -434,7 +439,9 @@ return (
 
 <div
   style={{
-    background: "#fff",
+    background: "#1e293b",
+border: "1px solid #334155",
+color: "#fff",
     padding: "20px",
     borderRadius: "8px",
     marginTop: "30px",
@@ -531,10 +538,11 @@ return (
 <div
   style={{
     marginTop: "40px",
-    background: "#fff",
+    background: "#1e293b",
+    color: "#ffffff",
     padding: "20px",
     borderRadius: "8px",
-    border: "1px solid #ddd",
+    border: "1px solid #334155",
   }}
 >
   
@@ -602,10 +610,11 @@ return (
 <div
   style={{
     marginTop: "40px",
-    background: "#fff",
+    background: "#1e293b",
+    color: "#ffffff",
     padding: "20px",
     borderRadius: "8px",
-    border: "1px solid #ddd",
+    border: "1px solid #334155",
   }}
 >
  <h2>👥 Top Customers</h2>

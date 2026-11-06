@@ -12,15 +12,17 @@ export default function AdminLayout({
     >
       <AdminSidebar />
 
-      <div
-        style={{
-          flex: 1,
-          padding: "20px",
-          background: "#f3f4f6",
-        }}
-      >
-        {children}
-      </div>
+     <div
+  style={{
+    flex: 1,
+    padding: "20px",
+    background: "#0f172a",
+    color: "#ffffff",
+    minHeight: "100vh",
+  }}
+>
+  {children}
+</div>
     </div>
   );
 }
