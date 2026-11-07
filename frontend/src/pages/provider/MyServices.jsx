@@ -48,12 +48,25 @@ export default function MyServices() {
               </p>
 
               <p className="mt-2">
-                Stato:
-                {" "}
+                Stato{" "}
                 {service.approved
                   ? "✅ Approvato"
                   : "⏳ In attesa"}
               </p>
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                  ✏️ Modifica
+                </button>
+
+                <button
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+                >
+                  🗑️ Elimina
+                </button>
+              </div>
             </div>
           ))}
         </div>
