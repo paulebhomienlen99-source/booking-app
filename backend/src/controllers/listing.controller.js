@@ -6,6 +6,7 @@ import {
   createListingService,
   getProviderServicesService,
   deleteServiceService,
+  updateServiceService,
 } from "../services/listing.service.js";
 
 export const createListing = async (
@@ -27,9 +28,7 @@ export const createListing = async (
         [req.user.id]
       );
 
-    if (
-      providerResult.rows.length === 0
-    ) {
+    if (providerResult.rows.length === 0) {
       return res.status(404).json({
         error: "Provider non trovato",
       });
@@ -104,9 +103,7 @@ export const getMyServices = async (
         [req.user.id]
       );
 
-    if (
-      providerResult.rows.length === 0
-    ) {
+    if (providerResult.rows.length === 0) {
       return res.json([]);
     }
 
@@ -143,9 +140,7 @@ export const deleteService = async (
         [req.user.id]
       );
 
-    if (
-      providerResult.rows.length === 0
-    ) {
+    if (providerResult.rows.length === 0) {
       return res.status(404).json({
         error: "Provider non trovato",
       });
@@ -170,6 +165,59 @@ export const deleteService = async (
       success: true,
       message: "Servizio eliminato",
       service: deleted,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Internal server error",
+    });
+  }
+};
+
+export const updateService = async (
+  req,
+  res
+) => {
+  try {
+    const providerResult =
+      await pool.query(
+        `
+        SELECT id
+        FROM providers
+        WHERE user_id = $1
+        `,
+        [req.user.id]
+      );
+
+    if (providerResult.rows.length === 0) {
+      return res.status(404).json({
+        error: "Provider non trovato",
+      });
+    }
+
+    const providerId =
+      providerResult.rows[0].id;
+
+    const updated =
+      await updateServiceService(
+        req.params.id,
+        providerId,
+        req.body.title,
+        req.body.description,
+        req.body.price
+      );
+
+    if (!updated) {
+      return res.status(404).json({
+        error: "Servizio non trovato",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Servizio aggiornato",
+      service: updated,
     });
   } catch (error) {
     console.error(error);

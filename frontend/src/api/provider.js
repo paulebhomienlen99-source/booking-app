@@ -87,6 +87,16 @@ export function deleteService(id) {
   );
 }
 
+export function updateService(
+  id,
+  data
+) {
+  return API.put(
+    `/service/${id}`,
+    data
+  );
+}
+
 export function getProviderBookings() {
   return API.get("/bookings");
 }

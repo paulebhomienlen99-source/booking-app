@@ -53,6 +53,7 @@ export const getProviderServicesService = async (
 
   return result.rows;
 };
+
 export const deleteServiceService = async (
   serviceId,
   providerId
@@ -65,6 +66,36 @@ export const deleteServiceService = async (
     RETURNING *
     `,
     [serviceId, providerId]
+  );
+
+  return result.rows[0];
+};
+
+export const updateServiceService = async (
+  serviceId,
+  providerId,
+  title,
+  description,
+  price
+) => {
+  const result = await pool.query(
+    `
+    UPDATE services
+    SET
+      title = $1,
+      description = $2,
+      price = $3
+    WHERE id = $4
+    AND provider_id = $5
+    RETURNING *
+    `,
+    [
+      title,
+      description,
+      price,
+      serviceId,
+      providerId,
+    ]
   );
 
   return result.rows[0];

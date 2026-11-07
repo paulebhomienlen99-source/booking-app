@@ -9,11 +9,14 @@ import {
   getProviderReservations,
   getProviderAnalytics,
 } from "../controllers/provider.controller.js";
+
 import {
   createListing,
   getMyServices,
   deleteService,
+  updateService,
 } from "../controllers/listing.controller.js";
+
 import {
   createSlot,
 } from "../controllers/slot.controller.js";
@@ -63,11 +66,19 @@ router.get(
   auth,
   getMyServices
 );
+
 router.delete(
   "/service/:id",
   auth,
   deleteService
 );
+
+router.put(
+  "/service/:id",
+  auth,
+  updateService
+);
+
 /*
 =====================================
 SLOTS
@@ -91,9 +102,11 @@ router.get(
   auth,
   getProviderReservations
 );
+
 router.get(
   "/analytics",
   auth,
   getProviderAnalytics
 );
+
 export default router;

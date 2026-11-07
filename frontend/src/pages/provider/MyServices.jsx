@@ -46,6 +46,17 @@ export default function MyServices() {
     }
   };
 
+  const handleEdit = (service) => {
+    console.log(
+      "Servizio da modificare:",
+      service
+    );
+
+    alert(
+      `Modifica servizio:\n\n${service.title}`
+    );
+  };
+
   return (
     <Layout>
       <h2 className="text-2xl font-bold mb-6">
@@ -84,6 +95,9 @@ export default function MyServices() {
 
               <div className="flex gap-3 mt-4">
                 <button
+                  onClick={() =>
+                    handleEdit(service)
+                  }
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                 >
                   ✏️ Modifica
@@ -91,9 +105,7 @@ export default function MyServices() {
 
                 <button
                   onClick={() =>
-                    handleDelete(
-                      service.id
-                    )
+                    handleDelete(service.id)
                   }
                   className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
                 >
