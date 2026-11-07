@@ -16,6 +16,18 @@ export default function GlobalSidebar() {
         label: "Services Pending",
         url: "/admin/services",
       },
+      {
+        label: "Prenotazioni",
+        url: "/admin/reservations",
+      },
+      {
+        label: "Utenti",
+        url: "/admin/users",
+      },
+      {
+        label: "Recensioni",
+        url: "/admin/reviews",
+      },
     ],
 
     provider: [
@@ -42,6 +54,10 @@ export default function GlobalSidebar() {
       {
         label: "Prenotazioni Ricevute",
         url: "/provider/bookings",
+      },
+      {
+        label: "🛠 I Miei Servizi",
+        url: "/provider/services",
       },
     ],
 
@@ -84,7 +100,7 @@ export default function GlobalSidebar() {
           <a
             key={item.url}
             href={item.url}
-            className="hover:text-gray-300"
+            className="hover:text-gray-300 transition"
           >
             {item.label}
           </a>

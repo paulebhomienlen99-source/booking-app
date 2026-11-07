@@ -20,6 +20,7 @@ import UploadDocument from "./pages/provider/UploadDocument";
 import CreateListing from "./pages/provider/CreateListing";
 import CreateSlot from "./pages/provider/CreateSlot";
 import ProviderBookings from "./pages/provider/ProviderBookings";
+import MyServices from "./pages/provider/MyServices";
 // CUSTOMER
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import Services from "./pages/customer/Services";
@@ -184,6 +185,14 @@ export default function App() {
     </ProtectedRoute>
   }
 />
+      <Route
+  path="/provider/services"
+  element={
+    <ProtectedRoute role="provider">
+      <MyServices />
+    </ProtectedRoute>
+  }
+/>  
         {/* CUSTOMER */}
         <Route
           path="/customer"

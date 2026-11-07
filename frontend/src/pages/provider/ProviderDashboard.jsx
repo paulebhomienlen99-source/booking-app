@@ -91,7 +91,7 @@ const chartData = [
       <h2 className="text-xl font-bold mb-4">
         Benvenuto Provider
       </h2>
-<div className="grid grid-cols-5 gap-4 mb-8">
+<div className="grid grid-cols-4 gap-4 mb-8">
 
   <div className="bg-white p-4 rounded shadow">
     <h3 className="font-bold">
@@ -142,7 +142,15 @@ const chartData = [
     {analytics.totalCustomers}
   </p>
 </div>
+<div className="bg-white p-4 rounded shadow">
+  <h3 className="font-bold">
+    💰 Entrate
+  </h3>
 
+  <p className="text-2xl mt-2">
+    € {analytics.totalRevenue}
+  </p>
+</div>
 <div className="bg-white p-4 rounded shadow">
   <h3 className="font-bold">
     🏆 Top Service

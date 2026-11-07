@@ -75,7 +75,7 @@ export default function ProvidersPending() {
       </h2>
 
       {providers.length === 0 ? (
-        <div className="bg-white p-4 rounded shadow">
+        <div className="bg-slate-800 text-white p-4 rounded shadow border border-slate-700">
           Nessun provider in attesa.
         </div>
       ) : (
@@ -84,7 +84,7 @@ export default function ProvidersPending() {
             (provider) => (
               <div
                 key={provider.id}
-                className="bg-white p-6 rounded shadow"
+                className="bg-slate-800 text-white p-4 rounded shadow border border-slate-700"
               >
                 <div className="grid grid-cols-2 gap-4">
                   <div>
