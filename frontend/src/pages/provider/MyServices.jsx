@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { getMyServices } from "../../api/provider";
+import {
+  getMyServices,
+  deleteService,
+} from "../../api/provider";
 import Layout from "../../components/Layout";
 
 export default function MyServices() {
@@ -15,6 +18,31 @@ export default function MyServices() {
       setServices(res.data || []);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm(
+      "Vuoi eliminare questo servizio?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteService(id);
+
+      setServices((prev) =>
+        prev.filter(
+          (service) => service.id !== id
+        )
+      );
+
+      alert("Servizio eliminato!");
+    } catch (error) {
+      console.error(error);
+      alert(
+        "Errore durante l'eliminazione"
+      );
     }
   };
 
@@ -62,6 +90,11 @@ export default function MyServices() {
                 </button>
 
                 <button
+                  onClick={() =>
+                    handleDelete(
+                      service.id
+                    )
+                  }
                   className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
                 >
                   🗑️ Elimina

@@ -12,8 +12,8 @@ import {
 import {
   createListing,
   getMyServices,
+  deleteService,
 } from "../controllers/listing.controller.js";
-
 import {
   createSlot,
 } from "../controllers/slot.controller.js";
@@ -63,7 +63,11 @@ router.get(
   auth,
   getMyServices
 );
-
+router.delete(
+  "/service/:id",
+  auth,
+  deleteService
+);
 /*
 =====================================
 SLOTS

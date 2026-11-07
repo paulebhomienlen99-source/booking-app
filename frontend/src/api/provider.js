@@ -59,6 +59,7 @@ export function createListing(
     }
   );
 }
+
 export function createSlot(
   service_id,
   date,
@@ -80,12 +81,20 @@ export function getMyServices() {
   return API.get("/services");
 }
 
+export function deleteService(id) {
+  return API.delete(
+    `/service/${id}`
+  );
+}
+
 export function getProviderBookings() {
   return API.get("/bookings");
 }
+
 export function getProviderAnalytics() {
   return API.get("/analytics");
 }
+
 /*
 =====================================
 PROVIDER PROFILE

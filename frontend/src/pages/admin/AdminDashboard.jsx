@@ -198,6 +198,18 @@ return (
       <h1>Dashboard Admin</h1>
 <div
   style={{
+    background: "#fef3c7",
+    color: "#92400e",
+    padding: "15px",
+    borderRadius: "8px",
+    marginBottom: "20px",
+    border: "1px solid #f59e0b",
+  }}
+>
+  🔔 Hai {stats?.pendingProviders ?? 0} provider in attesa di approvazione
+</div>
+<div
+  style={{
     display: "flex",
     gap: "10px",
     marginBottom: "20px",
