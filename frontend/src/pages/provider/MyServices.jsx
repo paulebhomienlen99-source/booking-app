@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   getMyServices,
   deleteService,
+  updateService,
 } from "../../api/provider";
 import Layout from "../../components/Layout";
 
@@ -46,15 +47,44 @@ export default function MyServices() {
     }
   };
 
-  const handleEdit = (service) => {
-    console.log(
-      "Servizio da modificare:",
-      service
+  const handleEdit = async (service) => {
+    const newTitle = prompt(
+      "Titolo",
+      service.title
     );
 
-    alert(
-      `Modifica servizio:\n\n${service.title}`
+    if (!newTitle) return;
+
+    const newDescription = prompt(
+      "Descrizione",
+      service.description
     );
+
+    if (!newDescription) return;
+
+    const newPrice = prompt(
+      "Prezzo",
+      service.price
+    );
+
+    if (!newPrice) return;
+
+    try {
+      await updateService(service.id, {
+        title: newTitle,
+        description: newDescription,
+        price: newPrice,
+      });
+
+      alert("Servizio aggiornato!");
+
+      loadServices();
+    } catch (error) {
+      console.error(error);
+      alert(
+        "Errore durante l'aggiornamento"
+      );
+    }
   };
 
   return (
