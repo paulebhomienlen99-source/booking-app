@@ -53,3 +53,19 @@ export const getProviderServicesService = async (
 
   return result.rows;
 };
+export const deleteServiceService = async (
+  serviceId,
+  providerId
+) => {
+  const result = await pool.query(
+    `
+    DELETE FROM services
+    WHERE id = $1
+    AND provider_id = $2
+    RETURNING *
+    `,
+    [serviceId, providerId]
+  );
+
+  return result.rows[0];
+};
