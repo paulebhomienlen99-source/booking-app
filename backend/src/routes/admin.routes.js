@@ -268,7 +268,6 @@ router.get("/services/pending", async (req, res) => {
 APPROVE SERVICE
 =================================================
 */
-
 router.put("/services/:id/approve", async (req, res) => {
   try {
     const { id } = req.params;
@@ -283,9 +282,40 @@ router.put("/services/:id/approve", async (req, res) => {
       [id]
     );
 
+    const service = result.rows[0];
+
+    if (service) {
+      const providerResult = await pool.query(
+        `
+        SELECT user_id
+        FROM providers
+        WHERE id = $1
+        `,
+        [service.provider_id]
+      );
+
+      if (providerResult.rows.length > 0) {
+        await pool.query(
+          `
+          INSERT INTO notifications (
+            user_id,
+            title,
+            message
+          )
+          VALUES ($1, $2, $3)
+          `,
+          [
+            providerResult.rows[0].user_id,
+            "Servizio approvato",
+            `Il tuo servizio "${service.title}" è stato approvato.`,
+          ]
+        );
+      }
+    }
+
     res.json({
       success: true,
-      service: result.rows[0],
+      service,
     });
   } catch (error) {
     console.error(error);

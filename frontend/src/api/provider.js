@@ -105,6 +105,12 @@ export function getProviderAnalytics() {
   return API.get("/analytics");
 }
 
+export function getNotifications() {
+  return API.get(
+    "/notifications"
+  );
+}
+
 /*
 =====================================
 PROVIDER PROFILE

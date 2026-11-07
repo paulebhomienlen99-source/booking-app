@@ -91,14 +91,14 @@ const chartData = [
       <h2 className="text-xl font-bold mb-4">
         Benvenuto Provider
       </h2>
-<div className="grid grid-cols-4 gap-4 mb-8">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
 
   <div className="bg-white p-4 rounded shadow">
     <h3 className="font-bold">
       📦 Prenotazioni
     </h3>
 
-    <p className="text-2xl mt-2">
+    <p className="text-xl md:text-2xl mt-2">
       {analytics.totalBookings}
     </p>
   </div>
@@ -108,7 +108,7 @@ const chartData = [
       ❌ Cancellate
     </h3>
 
-    <p className="text-2xl mt-2">
+    <p className="text-xl md:text-2xl mt-2">
       {analytics.cancelledBookings}
     </p>
   </div>
@@ -118,7 +118,7 @@ const chartData = [
       ⭐ Recensioni
     </h3>
 
-    <p className="text-2xl mt-2">
+    <p className="text-xl md:text-2xl mt-2">
       {analytics.totalReviews}
     </p>
   </div>
@@ -128,38 +128,40 @@ const chartData = [
       📈 Rating
     </h3>
 
-    <p className="text-2xl mt-2">
+    <p className="text-xl md:text-2xl mt-2">
       {analytics.averageRating}
     </p>
   </div>
 
   <div className="bg-white p-4 rounded shadow">
-  <h3 className="font-bold">
-    👥 Clienti
-  </h3>
+    <h3 className="font-bold">
+      👥 Clienti
+    </h3>
 
-  <p className="text-2xl mt-2">
-    {analytics.totalCustomers}
-  </p>
-</div>
-<div className="bg-white p-4 rounded shadow">
-  <h3 className="font-bold">
-    💰 Entrate
-  </h3>
+    <p className="text-xl md:text-2xl mt-2">
+      {analytics.totalCustomers}
+    </p>
+  </div>
 
-  <p className="text-2xl mt-2">
-    € {analytics.totalRevenue}
-  </p>
-</div>
-<div className="bg-white p-4 rounded shadow">
-  <h3 className="font-bold">
-    🏆 Top Service
-  </h3>
+  <div className="bg-white p-4 rounded shadow">
+    <h3 className="font-bold">
+      💰 Entrate
+    </h3>
 
-  <p className="text-lg mt-2">
-    {analytics.topService}
-  </p>
-</div>
+    <p className="text-xl md:text-2xl mt-2">
+      € {analytics.totalRevenue}
+    </p>
+  </div>
+
+  <div className="bg-white p-4 rounded shadow">
+    <h3 className="font-bold">
+      🏆 Top Service
+    </h3>
+
+    <p className="text-lg mt-2 break-words">
+      {analytics.topService || "-"}
+    </p>
+  </div>
 
 </div>
 

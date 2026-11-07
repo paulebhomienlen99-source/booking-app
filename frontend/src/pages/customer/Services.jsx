@@ -88,7 +88,7 @@ return (
 </h2>
 
 <div className="bg-white shadow rounded p-4 mb-6">
-  <div className="grid md:grid-cols-3 gap-4">
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
     <input
       type="text"
@@ -130,7 +130,7 @@ return (
 
   </div>
 </div>
-<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
 
   {filteredServices.map((s) => (
     <div
@@ -141,10 +141,10 @@ return (
         <img
           src={s.image_url}
           alt={s.title}
-          className="w-full h-64 object-cover"
+         className="w-full h-52 md:h-64 object-cover"
         />
       ) : (
-        <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
+       <div className="w-full h-52 md:h-64 bg-gray-200 flex items-center justify-center">
           Nessuna immagine
         </div>
       )}

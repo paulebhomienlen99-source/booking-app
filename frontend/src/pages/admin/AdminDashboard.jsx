@@ -79,7 +79,13 @@ console.log(
 );
 if (loading) {
     return (
-      <div style={{ padding: "20px" }}>
+      <div
+  style={{
+    padding: "20px",
+    maxWidth: "1600px",
+    margin: "0 auto",
+  }}
+>
         <h2>Caricamento statistiche...</h2>
       </div>
     );
@@ -210,8 +216,9 @@ return (
 </div>
 <div
   style={{
-    display: "flex",
-    gap: "10px",
+   display: "flex",
+gap: "10px",
+flexWrap: "wrap",
     marginBottom: "20px",
   }}
 >
@@ -246,8 +253,8 @@ return (
       <div
   style={{
     display: "grid",
-   gridTemplateColumns:
-  "repeat(auto-fit, minmax(350px, 1fr))",
+  gridTemplateColumns:
+"repeat(auto-fit, minmax(250px, 1fr))",
     gap: "20px",
     marginTop: "20px",
   }}
@@ -434,7 +441,7 @@ border: "1px solid #334155",
 
   <ResponsiveContainer
   width="100%"
-  height={350}
+ height={280}
 >
     <BarChart data={bookingData}>
       <CartesianGrid strokeDasharray="3 3" />
@@ -527,7 +534,8 @@ color: "#fff",
 
   <ResponsiveContainer
     width="100%"
-    height={400}
+    height={300}
+
   >
     <BarChart data={revenueTrendData}>
       <CartesianGrid
@@ -558,67 +566,79 @@ color: "#fff",
   }}
 >
   
-  <h2>🏆 Top Providers</h2>
+ <h2>🏆 Top Providers</h2>
 
-<table
+<div
   style={{
-    width: "100%",
+    overflowX: "auto",
     marginTop: "15px",
-    borderCollapse: "collapse",
   }}
 >
-  <thead>
-    <tr>
-      <th
-        style={{
-          padding: "12px",
-          textAlign: "left",
-          borderBottom: "2px solid #e5e7eb",
-        }}
-      >
-        Provider
-      </th>
+  <table
+    style={{
+      width: "100%",
+      minWidth: "600px",
+      borderCollapse: "collapse",
+    }}
+  >
+    <thead>
+      <tr>
+        <th
+          style={{
+            padding: "12px",
+            textAlign: "left",
+            borderBottom: "2px solid #334155",
+            color: "#ffffff",
+          }}
+        >
+          Provider
+        </th>
 
-<th
-  style={{
-    padding: "12px",
-    textAlign: "left",
-    borderBottom: "2px solid #334155",
-    color: "#ffffff",
-  }}
->
-        Prenotazioni
-      </th>
-    </tr>
-  </thead>
+        <th
+          style={{
+            padding: "12px",
+            textAlign: "left",
+            borderBottom: "2px solid #334155",
+            color: "#ffffff",
+          }}
+        >
+          Prenotazioni
+        </th>
+      </tr>
+    </thead>
 
-  <tbody>
-    {stats?.topProviders?.map(
-      (provider, index) => (
-        <tr key={index}>
-          <td
-            style={{
-              padding: "12px",
-              borderBottom: "1px solid #e5e7eb",
-            }}
-          >
-            {provider.name}
-          </td>
+    <tbody>
+      {stats?.topProviders?.map(
+        (provider, index) => (
+          <tr key={index}>
+            <td
+              style={{
+                padding: "12px",
+                borderBottom:
+                  "1px solid #334155",
+                color: "#e5e7eb",
+              }}
+            >
+              {provider.name}
+            </td>
 
-  <td
-  style={{
-    padding: "12px",
-    borderBottom: "1px solid #334155",
-    color: "#e5e7eb",
-  }}
->
-            {provider.bookings}
-          </td>
-        </tr>
-      )
-    )}
-  </tbody>
-</table>
+            <td
+              style={{
+                padding: "12px",
+                borderBottom:
+                  "1px solid #334155",
+                color: "#e5e7eb",
+              }}
+            >
+              {provider.bookings}
+            </td>
+          </tr>
+        )
+      )}
+    </tbody>
+  </table>
+</div>
+
 </div>
 
 <div
@@ -631,7 +651,7 @@ color: "#fff",
     border: "1px solid #334155",
   }}
 >
- <h2>👥 Top Customers</h2>
+  <h2>👥 Top Customers</h2>
 
 <table
   style={{

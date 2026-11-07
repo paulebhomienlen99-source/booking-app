@@ -51,13 +51,13 @@ export default function CustomerDashboard() {
         Dashboard Cliente
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
         <div className="bg-white shadow rounded p-6">
           <h3 className="text-gray-500">
             📦 Prenotazioni Totali
           </h3>
 
-          <p className="text-4xl font-bold mt-2">
+          <p className="text-3xl md:text-4xl font-bold mt-2">
             {analytics.totalBookings}
           </p>
         </div>
@@ -67,7 +67,7 @@ export default function CustomerDashboard() {
             ✅ Completate
           </h3>
 
-          <p className="text-4xl font-bold text-green-600 mt-2">
+          <p className="text-3xl md:text-4xl font-bold text-green-600 mt-2">
             {analytics.completedBookings}
           </p>
         </div>
@@ -77,7 +77,7 @@ export default function CustomerDashboard() {
             ❌ Cancellate
           </h3>
 
-          <p className="text-4xl font-bold text-red-600 mt-2">
+          <p className="text-3xl md:text-4xl font-bold text-red-600 mt-2">
             {analytics.cancelledBookings}
           </p>
         </div>
@@ -87,7 +87,7 @@ export default function CustomerDashboard() {
             💰 Totale Speso
           </h3>
 
-          <p className="text-4xl font-bold text-green-600 mt-2">
+          <p className="text-3xl md:text-4xl font-bold text-green-600 mt-2">
             € {analytics.totalSpent}
           </p>
         </div>
@@ -97,7 +97,7 @@ export default function CustomerDashboard() {
             ⭐ Recensioni Lasciate
           </h3>
 
-          <p className="text-4xl font-bold text-yellow-500 mt-2">
+          <p className="text-3xl md:text-4xl font-bold text-yellow-500 mt-2">
             {analytics.totalReviews}
           </p>
         </div>
@@ -108,62 +108,64 @@ export default function CustomerDashboard() {
           📋 Ultime Prenotazioni
         </h3>
 
-        <table className="w-full">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left p-2">
-                Servizio
-              </th>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-2">
+                  Servizio
+                </th>
 
-              <th className="text-left p-2">
-                Provider
-              </th>
+                <th className="text-left p-2">
+                  Provider
+                </th>
 
-              <th className="text-left p-2">
-                Stato
-              </th>
+                <th className="text-left p-2">
+                  Stato
+                </th>
 
-              <th className="text-left p-2">
-                Data
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {reservations.map((r) => (
-              <tr
-                key={r.id}
-                className="border-b"
-              >
-                <td className="p-2">
-                  {r.service_title}
-                </td>
-
-                <td className="p-2">
-                  {r.provider_name}
-                </td>
-
-                <td className="p-2">
-  <span
-    className={`px-3 py-1 rounded-full text-sm font-semibold ${
-      r.status === "confirmed"
-        ? "bg-green-100 text-green-700"
-        : r.status === "pending"
-        ? "bg-yellow-100 text-yellow-700"
-        : "bg-red-100 text-red-700"
-    }`}
-  >
-    {r.status}
-  </span>
-</td>
-
-                <td className="p-2">
-                  {r.slot_date}
-                </td>
+                <th className="text-left p-2">
+                  Data
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {reservations.map((r) => (
+                <tr
+                  key={r.id}
+                  className="border-b"
+                >
+                  <td className="p-2">
+                    {r.service_title}
+                  </td>
+
+                  <td className="p-2">
+                    {r.provider_name}
+                  </td>
+
+                  <td className="p-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        r.status === "confirmed"
+                          ? "bg-green-100 text-green-700"
+                          : r.status === "pending"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {r.status}
+                    </span>
+                  </td>
+
+                  <td className="p-2">
+                    {r.slot_date}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </Layout>
   );
