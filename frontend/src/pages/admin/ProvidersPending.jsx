@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import {
   getPendingProviders,
   approveProvider,
@@ -7,8 +6,11 @@ import {
 } from "../../api/admin";
 
 import Layout from "../../components/Layout";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function ProvidersPending() {
+  const { theme } = useTheme();
+
   const [providers, setProviders] = useState([]);
 
   useEffect(() => {
@@ -75,7 +77,13 @@ export default function ProvidersPending() {
       </h2>
 
       {providers.length === 0 ? (
-        <div className="bg-slate-800 text-white p-4 rounded shadow border border-slate-700">
+        <div
+          className={`p-4 rounded shadow border ${
+            theme === "dark"
+              ? "bg-slate-800 text-white border-slate-700"
+              : "bg-white text-black border-gray-200"
+          }`}
+        >
           Nessun provider in attesa.
         </div>
       ) : (
@@ -84,9 +92,13 @@ export default function ProvidersPending() {
             (provider) => (
               <div
                 key={provider.id}
-                className="bg-slate-800 text-white p-4 rounded shadow border border-slate-700"
+                className={`p-4 rounded shadow border ${
+                  theme === "dark"
+                    ? "bg-slate-800 text-white border-slate-700"
+                    : "bg-white text-black border-gray-200"
+                }`}
               >
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <strong>ID:</strong>{" "}
                     {provider.id}
@@ -147,29 +159,32 @@ export default function ProvidersPending() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-6 flex-wrap">
                   <button
-  onClick={() =>
-    handleApprove(
-      provider.id
-    )
-  }
-  disabled={!provider.document_path}
-  className={`px-4 py-2 rounded text-white ${
-    provider.document_path
-      ? "bg-green-600 hover:bg-green-700"
-      : "bg-gray-400 cursor-not-allowed"
-  }`}
->
-  Approva
-</button>
+                    onClick={() =>
+                      handleApprove(
+                        provider.id
+                      )
+                    }
+                    disabled={
+                      !provider.document_path
+                    }
+                    className={`px-4 py-2 rounded text-white ${
+                      provider.document_path
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    Approva
+                  </button>
+
                   <button
                     onClick={() =>
                       handleReject(
                         provider.id
                       )
                     }
-                    className="bg-red-600 text-white px-4 py-2 rounded"
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
                   >
                     Rifiuta
                   </button>

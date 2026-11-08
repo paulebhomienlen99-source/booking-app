@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { getNotifications } from "../api/provider";
+import { useTheme } from "../context/ThemeContext";
 
 export default function GlobalNavbar() {
   const role = localStorage.getItem("role");
+
+  const { theme, toggleTheme } =
+    useTheme();
 
   const [notifications, setNotifications] =
     useState([]);
@@ -30,12 +34,39 @@ export default function GlobalNavbar() {
   };
 
   return (
-    <div className="w-full bg-white shadow p-4 flex justify-between items-center">
+    <div
+      className="
+        w-full
+        bg-white
+        dark:bg-slate-800
+        dark:text-white
+        shadow
+        p-4
+        flex
+        justify-between
+        items-center
+      "
+    >
       <h1 className="text-2xl font-bold capitalize">
         {role} Dashboard
       </h1>
 
       <div className="flex items-center gap-4">
+        <button
+          onClick={toggleTheme}
+          className="
+            border
+            px-3
+            py-2
+            rounded
+            dark:border-slate-600
+          "
+        >
+          {theme === "dark"
+            ? "☀️"
+            : "🌙"}
+        </button>
+
         <div className="relative">
           <button
             className="text-2xl"
@@ -49,14 +80,43 @@ export default function GlobalNavbar() {
           </button>
 
           {notifications.length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+            <span
+              className="
+                absolute
+                -top-2
+                -right-2
+                bg-red-600
+                text-white
+                text-xs
+                px-2
+                py-1
+                rounded-full
+              "
+            >
               {notifications.length}
             </span>
           )}
 
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-96 bg-white border shadow-lg rounded-lg z-50 max-h-96 overflow-y-auto">
-              <div className="p-3 border-b font-bold">
+            <div
+              className="
+                absolute
+                right-0
+                mt-3
+                w-96
+                bg-white
+                dark:bg-slate-800
+                dark:text-white
+                border
+                dark:border-slate-700
+                shadow-lg
+                rounded-lg
+                z-50
+                max-h-96
+                overflow-y-auto
+              "
+            >
+              <div className="p-3 border-b dark:border-slate-700 font-bold">
                 🔔 Notifiche
               </div>
 
@@ -69,13 +129,26 @@ export default function GlobalNavbar() {
                   (notification) => (
                     <div
                       key={notification.id}
-                      className="p-4 border-b hover:bg-gray-50"
+                      className="
+                        p-4
+                        border-b
+                        dark:border-slate-700
+                        hover:bg-gray-50
+                        dark:hover:bg-slate-700
+                      "
                     >
                       <p className="font-semibold">
                         {notification.title}
                       </p>
 
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p
+                        className="
+                          text-sm
+                          text-gray-600
+                          dark:text-gray-300
+                          mt-1
+                        "
+                      >
                         {
                           notification.message
                         }
@@ -94,7 +167,13 @@ export default function GlobalNavbar() {
             window.location.href =
               "/login";
           }}
-          className="bg-red-600 text-white px-4 py-2 rounded"
+          className="
+            bg-red-600
+            text-white
+            px-4
+            py-2
+            rounded
+          "
         >
           Logout
         </button>
