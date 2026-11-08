@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { getNotifications } from "../api/provider";
+import {
+  getNotifications,
+  markNotificationAsRead,
+} from "../api/provider";
 import { useTheme } from "../context/ThemeContext";
 
 export default function GlobalNavbar() {
@@ -32,6 +35,30 @@ export default function GlobalNavbar() {
       console.error(error);
     }
   };
+
+  const handleNotificationClick =
+    async (id) => {
+      try {
+        await markNotificationAsRead(
+          id
+        );
+
+        setNotifications((prev) =>
+          prev.filter(
+            (notification) =>
+              notification.id !== id
+          )
+        );
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+  const unreadCount =
+    notifications.filter(
+      (notification) =>
+        !notification.is_read
+    ).length;
 
   return (
     <div
@@ -79,7 +106,7 @@ export default function GlobalNavbar() {
             🔔
           </button>
 
-          {notifications.length > 0 && (
+          {unreadCount > 0 && (
             <span
               className="
                 absolute
@@ -93,7 +120,7 @@ export default function GlobalNavbar() {
                 rounded-full
               "
             >
-              {notifications.length}
+              {unreadCount}
             </span>
           )}
 
@@ -129,12 +156,18 @@ export default function GlobalNavbar() {
                   (notification) => (
                     <div
                       key={notification.id}
+                      onClick={() =>
+                        handleNotificationClick(
+                          notification.id
+                        )
+                      }
                       className="
                         p-4
                         border-b
                         dark:border-slate-700
                         hover:bg-gray-50
                         dark:hover:bg-slate-700
+                        cursor-pointer
                       "
                     >
                       <p className="font-semibold">

@@ -111,6 +111,14 @@ export function getNotifications() {
   );
 }
 
+export function markNotificationAsRead(
+  id
+) {
+  return API.patch(
+    `/notifications/${id}/read`
+  );
+}
+
 /*
 =====================================
 PROVIDER PROFILE

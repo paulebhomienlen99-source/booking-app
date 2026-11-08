@@ -141,5 +141,33 @@ router.get(
     }
   }
 );
+router.patch(
+  "/notifications/:id/read",
+  auth,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
+      await pool.query(
+        `
+        UPDATE notifications
+        SET is_read = true
+        WHERE id = $1
+        AND user_id = $2
+        `,
+        [id, req.user.id]
+      );
+
+      res.json({
+        success: true,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        error: "Internal server error",
+      });
+    }
+  }
+);
 export default router;
